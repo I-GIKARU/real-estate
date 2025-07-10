@@ -216,6 +216,16 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// Check if user's email is verified
+	if !user.IsVerified {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Email verification required. Please verify your email before logging in.",
+			"verification_required": true,
+			"user_email": user.Email,
+		})
+		return
+	}
+
 	// Generate JWT token
 	token, err := h.jwtManager.GenerateToken(user.ID, user.Email, string(user.UserType))
 	if err != nil {

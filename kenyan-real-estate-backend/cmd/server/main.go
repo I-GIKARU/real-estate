@@ -174,9 +174,10 @@ func main() {
 		protected.POST("/send-verification-email", emailVerificationHandler.SendVerificationEmail)
 		protected.GET("/verification-status", emailVerificationHandler.GetVerificationStatus)
 
-		// Property management (landlord only)
+		// Property management (landlord only) - requires email verification
 		landlordRoutes := protected.Group("/")
 		landlordRoutes.Use(middleware.RequireUserType("landlord"))
+		landlordRoutes.Use(middleware.RequireVerifiedEmail(userRepo))
 		{
 			landlordRoutes.POST("/properties", propertyHandler.CreateProperty)
 			landlordRoutes.PUT("/properties/:id", propertyHandler.UpdateProperty)
@@ -186,9 +187,10 @@ func main() {
 			landlordRoutes.DELETE("/properties/:id/images/:image_id", propertyHandler.DeletePropertyImage)
 		}
 
-		// Tenant routes
+		// Tenant routes - requires email verification for applications and payments
 		tenantRoutes := protected.Group("/")
 		tenantRoutes.Use(middleware.RequireUserType("tenant"))
+		tenantRoutes.Use(middleware.RequireVerifiedEmail(userRepo))
 		{
 			// tenantRoutes.POST("/applications", applicationHandler.CreateApplication)
 			// tenantRoutes.GET("/my-applications", applicationHandler.GetMyApplications)

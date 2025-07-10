@@ -102,6 +102,11 @@ func (u *User) CheckPassword(password string) bool {
 	return err == nil
 }
 
+// GetIsVerified returns the verification status of the user
+func (u *User) GetIsVerified() bool {
+	return u.IsVerified
+}
+
 // BeforeCreate GORM hook to set ID and hash password
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	if u.ID == uuid.Nil {

@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"strings"
 
+	"kenyan-real-estate-backend/internal/models"
 	"kenyan-real-estate-backend/pkg/auth"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // AuthMiddleware creates a middleware for JWT authentication
@@ -93,6 +95,57 @@ func RequireUserType(allowedTypes ...string) gin.HandlerFunc {
 			"error": "Insufficient permissions",
 		})
 		c.Abort()
+	}
+}
+
+// UserRepositoryInterface defines the interface for user repository
+type UserRepositoryInterface interface {
+	GetByID(id uuid.UUID) (*models.User, error)
+}
+
+// RequireVerifiedEmail creates a middleware that requires users to have verified emails
+func RequireVerifiedEmail(userRepo UserRepositoryInterface) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userIDInterface, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "User ID not found in context",
+			})
+			c.Abort()
+			return
+		}
+
+		// Convert userID to UUID
+		userID, ok := userIDInterface.(uuid.UUID)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Invalid user ID format",
+			})
+			c.Abort()
+			return
+		}
+
+		// Get user from database to check verification status
+		user, err := userRepo.GetByID(userID)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "User not found",
+			})
+			c.Abort()
+			return
+		}
+
+		// Check if user's email is verified
+		if !user.IsVerified {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "Email verification required. Please verify your email before accessing this resource.",
+				"verification_required": true,
+			})
+			c.Abort()
+			return
+		}
+
+		c.Next()
 	}
 }
 
