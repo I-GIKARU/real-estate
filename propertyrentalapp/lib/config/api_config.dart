@@ -1,6 +1,9 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class ApiConfig {
-  static const String baseUrl = 'https://kenyan-real-estate-backend-671327858247.us-central1.run.app/api/v1';
-  static const bool isDevelopment = true;
+  static String get baseUrl => dotenv.env['API_BASE_URL'] ?? ' ';
+  static bool get isDevelopment => dotenv.env['DEBUG_MODE'] == 'true';
+  static String get apiKey => dotenv.env['API_KEY'] ?? '';
   
   // Auth endpoints
   static const String register = '/register';
@@ -34,6 +37,7 @@ class ApiConfig {
   static Map<String, String> get headers => {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    if (apiKey.isNotEmpty) 'X-API-Key': apiKey,
   };
   
   static Map<String, String> getAuthHeaders(String token) => {

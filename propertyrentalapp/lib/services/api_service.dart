@@ -1,10 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 
 class ApiService {
-  // Base URL for the backend API
-  static const String baseUrl = 'https://api.example.com/api/v1';
-  
   // Auth token storage
   static String? _authToken;
   
@@ -25,10 +23,7 @@ class ApiService {
   
   // Headers with auth token
   static Map<String, String> get _headers {
-    final headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
+    final headers = Map<String, String>.from(ApiConfig.headers);
     
     if (_authToken != null) {
       headers['Authorization'] = 'Bearer $_authToken';
@@ -41,7 +36,7 @@ class ApiService {
   static Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.login}'),
         headers: _headers,
         body: jsonEncode({
           'email': email,
@@ -67,7 +62,7 @@ class ApiService {
   static Future<Map<String, dynamic>> register(Map<String, dynamic> userData) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/register'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.register}'),
         headers: _headers,
         body: jsonEncode(userData),
       );
@@ -90,7 +85,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getUserProfile() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/user/profile'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.profile}'),
         headers: _headers,
       );
       
@@ -110,7 +105,7 @@ class ApiService {
   static Future<Map<String, dynamic>> updateUserProfile(Map<String, dynamic> userData) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/user/profile'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.profile}'),
         headers: _headers,
         body: jsonEncode(userData),
       );
@@ -147,7 +142,7 @@ class ApiService {
       if (priceRange != null) queryParams['price_range'] = priceRange;
       if (sort != null) queryParams['sort'] = sort;
       
-      final uri = Uri.parse('$baseUrl/properties').replace(queryParameters: queryParams);
+      final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.properties}').replace(queryParameters: queryParams);
       
       final response = await http.get(
         uri,
@@ -170,7 +165,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getPropertyDetails(String propertyId) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/properties/$propertyId'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.properties}/$propertyId'),
         headers: _headers,
       );
       
@@ -190,7 +185,7 @@ class ApiService {
   static Future<void> saveProperty(String propertyId) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/favorites'),
+        Uri.parse('${ApiConfig.baseUrl}/favorites'),
         headers: _headers,
         body: jsonEncode({
           'property_id': propertyId,
@@ -210,7 +205,7 @@ class ApiService {
   static Future<void> unsaveProperty(String propertyId) async {
     try {
       final response = await http.delete(
-        Uri.parse('$baseUrl/favorites/$propertyId'),
+        Uri.parse('${ApiConfig.baseUrl}/favorites/$propertyId'),
         headers: _headers,
       );
       
@@ -227,7 +222,7 @@ class ApiService {
   static Future<List<dynamic>> getSavedProperties() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/favorites'),
+        Uri.parse('${ApiConfig.baseUrl}/favorites'),
         headers: _headers,
       );
       
@@ -247,7 +242,7 @@ class ApiService {
   static Future<Map<String, dynamic>> createBooking(Map<String, dynamic> bookingData) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/bookings'),
+        Uri.parse('${ApiConfig.baseUrl}/bookings'),
         headers: _headers,
         body: jsonEncode(bookingData),
       );
@@ -268,7 +263,7 @@ class ApiService {
   static Future<List<dynamic>> getBookings() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/bookings'),
+        Uri.parse('${ApiConfig.baseUrl}/bookings'),
         headers: _headers,
       );
       
@@ -288,7 +283,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getBookingDetails(String bookingId) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/bookings/$bookingId'),
+        Uri.parse('${ApiConfig.baseUrl}/bookings/$bookingId'),
         headers: _headers,
       );
       
@@ -308,7 +303,7 @@ class ApiService {
   static Future<void> cancelBooking(String bookingId) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/bookings/$bookingId/cancel'),
+        Uri.parse('${ApiConfig.baseUrl}/bookings/$bookingId/cancel'),
         headers: _headers,
       );
       
@@ -325,7 +320,7 @@ class ApiService {
   static Future<Map<String, dynamic>> processPayment(Map<String, dynamic> paymentData) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/payments'),
+        Uri.parse('${ApiConfig.baseUrl}/payments'),
         headers: _headers,
         body: jsonEncode(paymentData),
       );
@@ -346,7 +341,7 @@ class ApiService {
   static Future<List<dynamic>> getPaymentMethods() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/payment-methods'),
+        Uri.parse('${ApiConfig.baseUrl}/payment-methods'),
         headers: _headers,
       );
       
@@ -366,7 +361,7 @@ class ApiService {
   static Future<Map<String, dynamic>> addPaymentMethod(Map<String, dynamic> paymentMethodData) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/payment-methods'),
+        Uri.parse('${ApiConfig.baseUrl}/payment-methods'),
         headers: _headers,
         body: jsonEncode(paymentMethodData),
       );
@@ -387,7 +382,7 @@ class ApiService {
   static Future<void> deletePaymentMethod(String paymentMethodId) async {
     try {
       final response = await http.delete(
-        Uri.parse('$baseUrl/payment-methods/$paymentMethodId'),
+        Uri.parse('${ApiConfig.baseUrl}/payment-methods/$paymentMethodId'),
         headers: _headers,
       );
       
@@ -404,7 +399,7 @@ class ApiService {
   static Future<Map<String, dynamic>> submitReview(Map<String, dynamic> reviewData) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/reviews'),
+        Uri.parse('${ApiConfig.baseUrl}/reviews'),
         headers: _headers,
         body: jsonEncode(reviewData),
       );
@@ -425,7 +420,7 @@ class ApiService {
   static Future<List<dynamic>> getPropertyReviews(String propertyId) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/properties/$propertyId/reviews'),
+        Uri.parse('${ApiConfig.baseUrl}/properties/$propertyId/reviews'),
         headers: _headers,
       );
       
@@ -445,7 +440,7 @@ class ApiService {
   static Future<List<dynamic>> getUserReviews() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/user/reviews'),
+        Uri.parse('${ApiConfig.baseUrl}/user/reviews'),
         headers: _headers,
       );
       
