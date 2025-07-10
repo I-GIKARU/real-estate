@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -146,9 +147,8 @@ func (h *EmailVerificationHandler) SendVerificationEmail(c *gin.Context) {
 func (h *EmailVerificationHandler) VerifyEmailGET(c *gin.Context) {
 	token := c.Query("token")
 	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Verification token is required",
-		})
+		errorHTML := h.generateErrorHTML("Missing Token", "The verification token is missing from the request. Please check your email and click the verification link again.")
+		c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(errorHTML))
 		return
 	}
 
@@ -180,44 +180,69 @@ func (h *EmailVerificationHandler) VerifyEmail(c *gin.Context) {
 	h.verifyEmailWithToken(c, req.Token)
 }
 
+// generateErrorHTML generates HTML for error responses
+func (h *EmailVerificationHandler) generateErrorHTML(title, message string) string {
+	return fmt.Sprintf(`
+	<!DOCTYPE html>
+	<html>
+	<head>
+	    <meta charset="UTF-8">
+	    <title>%s</title>
+	    <style>
+	        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+	        .header { background-color: #dc3545; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+	        .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; text-align: center; }
+	        .footer { margin-top: 30px; font-size: 12px; color: #666; text-align: center; }
+	    </style>
+	</head>
+	<body>
+	    <div class="header">
+	        <h1>%s</h1>
+	    </div>
+	    <div class="content">
+	        <p>%s</p>
+	    </div>
+	    <div class="footer">
+	        <p>&copy; 2025 Kenyan Real Estate. All rights reserved.</p>
+	    </div>
+	</body>
+	</html>
+	`, title, title, message)
+}
+
 // verifyEmailWithToken handles the common verification logic
 func (h *EmailVerificationHandler) verifyEmailWithToken(c *gin.Context, token string) {
 	// Get verification record by token
 	verification, err := h.emailVerificationRepo.GetByToken(token)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "Invalid verification token",
-			})
+			errorHTML := h.generateErrorHTML("Invalid Token", "The verification token is invalid or does not exist.")
+			c.Data(http.StatusNotFound, "text/html; charset=utf-8", []byte(errorHTML))
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to get verification record",
-		})
+		errorHTML := h.generateErrorHTML("Server Error", "An error occurred while processing your request. Please try again later.")
+		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(errorHTML))
 		return
 	}
 
 	// Check if token is expired
 	if verification.IsExpired() {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Verification token has expired",
-		})
+		errorHTML := h.generateErrorHTML("Token Expired", "The verification token has expired. Please request a new verification email.")
+		c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(errorHTML))
 		return
 	}
 
 	// Check if token is already used
 	if verification.IsUsed {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Verification token has already been used",
-		})
+		errorHTML := h.generateErrorHTML("Token Already Used", "This verification token has already been used. Your email may already be verified.")
+		c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(errorHTML))
 		return
 	}
 
 	// Mark verification as used
 	if err := h.emailVerificationRepo.MarkAsUsed(verification.ID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to mark verification as used",
-		})
+		errorHTML := h.generateErrorHTML("Server Error", "An error occurred while processing your verification. Please try again later.")
+		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(errorHTML))
 		return
 	}
 
@@ -225,9 +250,8 @@ func (h *EmailVerificationHandler) verifyEmailWithToken(c *gin.Context, token st
 	user := verification.User
 	user.IsVerified = true
 	if err := h.userRepo.Update(&user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to update user verification status",
-		})
+		errorHTML := h.generateErrorHTML("Server Error", "An error occurred while updating your account. Please try again later.")
+		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(errorHTML))
 		return
 	}
 
@@ -238,10 +262,35 @@ func (h *EmailVerificationHandler) verifyEmailWithToken(c *gin.Context, token st
 		h.emailService.SendWelcomeEmail(user.Email, fullName)
 	}()
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Email verified successfully",
-		"user":    user.ToResponse(),
-	})
+successHTML := fmt.Sprintf(`
+	<!DOCTYPE html>
+	<html>
+	<head>
+	    <meta charset="UTF-8">
+	    <title>Email Verified</title>
+	    <style>
+	        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+	        .header { background-color: #28a745; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+	        .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; text-align: center; }
+	        .footer { margin-top: 30px; font-size: 12px; color: #666; text-align: center; }
+	    </style>
+	</head>
+	<body>
+	    <div class="header">
+	        <h1>Email Verified Successfully</h1>
+	    </div>
+	    <div class="content">
+	        <p>Hello %s,</p>
+	        <p>Your email has been verified successfully! You can now start using your account.</p>
+	    </div>
+	    <div class="footer">
+	        <p>&copy; 2025 Kenyan Real Estate. All rights reserved.</p>
+	    </div>
+	</body>
+	</html>
+	`, user.FirstName + " " + user.LastName)
+
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(successHTML))
 }
 
 // GetVerificationStatus gets the email verification status for the current user
