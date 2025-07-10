@@ -54,6 +54,7 @@ jobs:
             APP_ENV=production
             SERVER_HOST=0.0.0.0
             SERVER_PORT=8080
+            BASE_URL=https://kenyan-real-estate-backend-671327858247.us-central1.run.app
           secrets: |
             JWT_SECRET=JWT_SECRET:latest
             DB_HOST=DB_HOST:latest
