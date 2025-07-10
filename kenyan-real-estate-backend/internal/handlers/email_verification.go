@@ -131,6 +131,30 @@ func (h *EmailVerificationHandler) SendVerificationEmail(c *gin.Context) {
 	})
 }
 
+// VerifyEmailGET verifies a user's email using the verification token via GET request
+// @Summary Verify email address via GET
+// @Description Verify email address using the verification token from URL parameter
+// @Tags Email Verification
+// @Accept json
+// @Produce json
+// @Param token query string true "Verification token"
+// @Success 200 {object} object{message=string,user=models.UserResponse} "Email verified successfully"
+// @Failure 400 {object} object{error=string} "Invalid token or expired"
+// @Failure 404 {object} object{error=string} "Token not found"
+// @Failure 500 {object} object{error=string} "Internal server error"
+// @Router /verify-email [get]
+func (h *EmailVerificationHandler) VerifyEmailGET(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Verification token is required",
+		})
+		return
+	}
+
+	h.verifyEmailWithToken(c, token)
+}
+
 // VerifyEmail verifies a user's email using the verification token
 // @Summary Verify email address
 // @Description Verify email address using the verification token
@@ -153,89 +177,11 @@ func (h *EmailVerificationHandler) VerifyEmail(c *gin.Context) {
 		return
 	}
 
-	// Get verification record by token
-	verification, err := h.emailVerificationRepo.GetByToken(req.Token)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "Invalid verification token",
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to get verification record",
-		})
-		return
-	}
-
-	// Check if token is expired
-	if verification.IsExpired() {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Verification token has expired",
-		})
-		return
-	}
-
-	// Check if token is already used
-	if verification.IsUsed {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Verification token has already been used",
-		})
-		return
-	}
-
-	// Mark verification as used
-	if err := h.emailVerificationRepo.MarkAsUsed(verification.ID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to mark verification as used",
-		})
-		return
-	}
-
-	// Update user's verified status
-	user := verification.User
-	user.IsVerified = true
-	if err := h.userRepo.Update(&user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to update user verification status",
-		})
-		return
-	}
-
-	// Send welcome email
-	fullName := user.FirstName + " " + user.LastName
-	go func() {
-		// Send welcome email in background (don't fail the request if this fails)
-		h.emailService.SendWelcomeEmail(user.Email, fullName)
-	}()
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Email verified successfully",
-		"user":    user.ToResponse(),
-	})
+	h.verifyEmailWithToken(c, req.Token)
 }
 
-// VerifyEmailByToken verifies a user's email using a token from query parameter (GET request)
-// @Summary Verify email address via GET
-// @Description Verify email address using the verification token from query parameter
-// @Tags Email Verification
-// @Accept json
-// @Produce json
-// @Param token query string true "Verification token"
-// @Success 200 {object} object{message=string,user=models.UserResponse} "Email verified successfully"
-// @Failure 400 {object} object{error=string} "Invalid token or expired"
-// @Failure 404 {object} object{error=string} "Token not found"
-// @Failure 500 {object} object{error=string} "Internal server error"
-// @Router /verify-email [get]
-func (h *EmailVerificationHandler) VerifyEmailByToken(c *gin.Context) {
-	token := c.Query("token")
-	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Token is required",
-		})
-		return
-	}
-
+// verifyEmailWithToken handles the common verification logic
+func (h *EmailVerificationHandler) verifyEmailWithToken(c *gin.Context, token string) {
 	// Get verification record by token
 	verification, err := h.emailVerificationRepo.GetByToken(token)
 	if err != nil {

@@ -95,7 +95,7 @@ func main() {
 	emailService := services.NewEmailService(&cfg.Email)
 
 	// Initialize handlers
-	userHandler := handlers.NewUserHandler(userRepo, jwtManager)
+	userHandler := handlers.NewUserHandler(userRepo, jwtManager, emailVerificationRepo, emailService)
 	propertyHandler := handlers.NewPropertyHandler(propertyRepo, propertyImageRepo, cloudinaryService, &cfg.Upload)
 	locationHandler := handlers.NewLocationHandler(countyRepo, subCountyRepo)
 	emailVerificationHandler := handlers.NewEmailVerificationHandler(userRepo, emailVerificationRepo, emailService)
@@ -135,7 +135,6 @@ func main() {
 		// User authentication
 		public.POST("/register", userHandler.Register)
 		public.POST("/login", userHandler.Login)
-		public.POST("/refresh-token", userHandler.RefreshToken)
 
 		// Public property listings
 		public.GET("/properties", propertyHandler.GetPublicProperties)
@@ -149,7 +148,7 @@ func main() {
 
 		// Email verification (public)
 		public.POST("/verify-email", emailVerificationHandler.VerifyEmail)
-		public.GET("/verify-email", emailVerificationHandler.VerifyEmailByToken)
+		public.GET("/verify-email", emailVerificationHandler.VerifyEmailGET)
 
 		// Kenyan-specific features
 		public.GET("/amenities", kenyanFeaturesHandler.GetAmenities)
@@ -170,7 +169,6 @@ func main() {
 	{
 		// User profile
 		protected.GET("/profile", userHandler.GetProfile)
-		protected.PUT("/profile", userHandler.UpdateProfile)
 
 		// Email verification (protected)
 		protected.POST("/send-verification-email", emailVerificationHandler.SendVerificationEmail)

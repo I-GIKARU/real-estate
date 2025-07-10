@@ -3,9 +3,11 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
+	"time"
 
-	"kenyan-real-estate-backend/internal/models"
 	"kenyan-real-estate-backend/pkg/auth"
+	"kenyan-real-estate-backend/internal/models"
+	"kenyan-real-estate-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -13,15 +15,24 @@ import (
 
 // UserHandler handles user-related HTTP requests
 type UserHandler struct {
-	userRepo   *models.UserRepository
-	jwtManager *auth.JWTManager
+	userRepo              *models.UserRepository
+	jwtManager            *auth.JWTManager
+	emailVerificationRepo *models.EmailVerificationRepository
+	emailService          *services.EmailService
 }
 
 // NewUserHandler creates a new user handler
-func NewUserHandler(userRepo *models.UserRepository, jwtManager *auth.JWTManager) *UserHandler {
+func NewUserHandler(
+	userRepo *models.UserRepository,
+	jwtManager *auth.JWTManager,
+	emailVerificationRepo *models.EmailVerificationRepository,
+	emailService *services.EmailService,
+) *UserHandler {
 	return &UserHandler{
-		userRepo:   userRepo,
-		jwtManager: jwtManager,
+		userRepo:              userRepo,
+		jwtManager:            jwtManager,
+		emailVerificationRepo: emailVerificationRepo,
+		emailService:          emailService,
 	}
 }
 
@@ -111,12 +122,45 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// Automatically send verification email
+	go h.sendVerificationEmailAsync(user)
+
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "User created successfully. Please verify your email address.",
+		"message": "User created successfully. Please check your email to verify your account.",
 		"user":    user.ToResponse(),
 		"token":   token,
 		"email_verification_required": true,
 	})
+}
+
+// sendVerificationEmailAsync sends a verification email asynchronously
+// to the newly registered user.
+func (h *UserHandler) sendVerificationEmailAsync(user *models.User) {
+	// Check for rate limiting (max 1 email per 5 minutes)
+	existingVerification, err := h.emailVerificationRepo.GetByUserID(user.ID)
+	if err == nil && !existingVerification.IsUsed {
+		timeSinceLastEmail := time.Since(existingVerification.CreatedAt)
+		if timeSinceLastEmail < 5*time.Minute {
+			return
+		}
+	}
+
+	// Generate verification token
+	token := services.GenerateSecureToken()
+
+	// Create verification record
+	verification := &models.EmailVerification{
+		UserID:    user.ID,
+		Token:     token,
+		ExpiresAt: time.Now().Add(24 * time.Hour), // 24 hours expiry
+		IsUsed:    false,
+	}
+
+	h.emailVerificationRepo.Create(verification)
+
+	// Send verification email
+	fullName := user.FirstName + " " + user.LastName
+	h.emailService.SendVerificationEmail(user.Email, fullName, token)
 }
 
 // Login handles user login
@@ -217,6 +261,7 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
+	// Get user
 	user, err := h.userRepo.GetByID(userUUID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -235,148 +280,3 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 		"user": user.ToResponse(),
 	})
 }
-
-// UpdateProfile handles updating user profile
-// @Summary Update user profile
-// @Description Update the profile information of the currently authenticated user
-// @Tags Users
-// @Accept json
-// @Produce json
-// @Security Bearer
-// @Param updates body object{first_name=string,last_name=string,phone_number=string,id_number=string,profile_image_url=string} true "Profile updates"
-// @Success 200 {object} object{message=string,user=models.UserResponse} "Profile updated successfully"
-// @Failure 400 {object} object{error=string,details=string} "Invalid request data"
-// @Failure 401 {object} object{error=string} "Unauthorized"
-// @Failure 404 {object} object{error=string} "User not found"
-// @Failure 409 {object} object{error=string} "Phone number already exists"
-// @Failure 500 {object} object{error=string} "Internal server error"
-// @Router /profile [put]
-func (h *UserHandler) UpdateProfile(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "User ID not found in context",
-		})
-		return
-	}
-
-	userUUID, ok := userID.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Invalid user ID format",
-		})
-		return
-	}
-
-	// Get current user
-	user, err := h.userRepo.GetByID(userUUID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to get user",
-		})
-		return
-	}
-
-	// Parse update request
-	var updateData struct {
-		FirstName       *string `json:"first_name,omitempty"`
-		LastName        *string `json:"last_name,omitempty"`
-		PhoneNumber     *string `json:"phone_number,omitempty"`
-		IDNumber        *string `json:"id_number,omitempty"`
-		ProfileImageURL *string `json:"profile_image_url,omitempty"`
-	}
-
-	if err := c.ShouldBindJSON(&updateData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request data",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	// Update fields if provided
-	if updateData.FirstName != nil {
-		user.FirstName = *updateData.FirstName
-	}
-	if updateData.LastName != nil {
-		user.LastName = *updateData.LastName
-	}
-	if updateData.PhoneNumber != nil {
-		// Check if new phone number already exists (for other users)
-		phoneExists, err := h.userRepo.PhoneExists(*updateData.PhoneNumber)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to check phone number existence",
-			})
-			return
-		}
-		if phoneExists && *updateData.PhoneNumber != user.PhoneNumber {
-			c.JSON(http.StatusConflict, gin.H{
-				"error": "Phone number already exists",
-			})
-			return
-		}
-		user.PhoneNumber = *updateData.PhoneNumber
-	}
-	if updateData.ProfileImageURL != nil {
-		user.ProfileImageURL = updateData.ProfileImageURL
-	}
-
-	// Update user in database
-	if err := h.userRepo.Update(user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to update user",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Profile updated successfully",
-		"user":    user.ToResponse(),
-	})
-}
-
-// RefreshToken handles token refresh
-// @Summary Refresh JWT token
-// @Description Refresh an expired JWT token to get a new one
-// @Tags Authentication
-// @Accept json
-// @Produce json
-// @Param token body object{token=string} true "Refresh token request"
-// @Success 200 {object} object{token=string} "Token refreshed successfully"
-// @Failure 400 {object} object{error=string,details=string} "Invalid request data"
-// @Failure 401 {object} object{error=string,details=string} "Failed to refresh token"
-// @Router /refresh-token [post]
-func (h *UserHandler) RefreshToken(c *gin.Context) {
-	var req struct {
-		Token string `json:"token" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request data",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	newToken, err := h.jwtManager.RefreshToken(req.Token)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "Failed to refresh token",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"token": newToken,
-	})
-}
-

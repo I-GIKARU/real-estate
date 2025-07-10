@@ -35,7 +35,7 @@ type VerificationEmailData struct {
 // SendVerificationEmail sends an email verification email
 func (s *EmailService) SendVerificationEmail(to, userName, verificationToken string) error {
 	// Create verification URL
-	verificationURL := fmt.Sprintf("%s/verify-email?token=%s", s.config.BaseURL, verificationToken)
+	verificationURL := fmt.Sprintf("%s/api/v1/verify-email?token=%s", s.config.BaseURL, verificationToken)
 	
 	// Prepare email data
 	data := VerificationEmailData{
