@@ -149,6 +149,7 @@ func main() {
 
 		// Email verification (public)
 		public.POST("/verify-email", emailVerificationHandler.VerifyEmail)
+		public.GET("/verify-email", emailVerificationHandler.VerifyEmailByToken)
 
 		// Kenyan-specific features
 		public.GET("/amenities", kenyanFeaturesHandler.GetAmenities)
