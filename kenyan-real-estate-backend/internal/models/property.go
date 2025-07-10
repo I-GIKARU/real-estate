@@ -1,13 +1,13 @@
 package models
 
 import (
-	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // PropertyType represents different types of properties in Kenya
@@ -76,35 +76,36 @@ func (u *UtilitiesIncluded) Scan(value interface{}) error {
 
 // Property represents a rental property
 type Property struct {
-	ID                uuid.UUID         `json:"id" db:"id"`
-	LandlordID        uuid.UUID         `json:"landlord_id" db:"landlord_id"`
-	Title             string            `json:"title" db:"title"`
-	Description       *string           `json:"description,omitempty" db:"description"`
-	PropertyType      PropertyType      `json:"property_type" db:"property_type"`
-	Bedrooms          int               `json:"bedrooms" db:"bedrooms"`
-	Bathrooms         int               `json:"bathrooms" db:"bathrooms"`
-	SquareMeters      *float64          `json:"square_meters,omitempty" db:"square_meters"`
-	RentAmount        float64           `json:"rent_amount" db:"rent_amount"`
-	DepositAmount     *float64          `json:"deposit_amount,omitempty" db:"deposit_amount"`
-	CountyID          int               `json:"county_id" db:"county_id"`
-	SubCountyID       *int              `json:"sub_county_id,omitempty" db:"sub_county_id"`
-	LocationDetails   *string           `json:"location_details,omitempty" db:"location_details"`
-	Latitude          *float64          `json:"latitude,omitempty" db:"latitude"`
-	Longitude         *float64          `json:"longitude,omitempty" db:"longitude"`
-	Amenities         Amenities         `json:"amenities" db:"amenities"`
-	UtilitiesIncluded UtilitiesIncluded `json:"utilities_included" db:"utilities_included"`
-	ParkingSpaces     int               `json:"parking_spaces" db:"parking_spaces"`
-	IsFurnished       bool              `json:"is_furnished" db:"is_furnished"`
-	IsAvailable       bool              `json:"is_available" db:"is_available"`
-	AvailabilityDate  *time.Time        `json:"availability_date,omitempty" db:"availability_date"`
-	CreatedAt         time.Time         `json:"created_at" db:"created_at"`
-	UpdatedAt         time.Time         `json:"updated_at" db:"updated_at"`
-	
-	// Joined fields
-	County    *County    `json:"county,omitempty"`
-	SubCounty *SubCounty `json:"sub_county,omitempty"`
-	Landlord  *User      `json:"landlord,omitempty"`
-	Images    []*PropertyImage `json:"images,omitempty"`
+	ID                uuid.UUID         `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	LandlordID        uuid.UUID         `json:"landlord_id" gorm:"type:uuid;not null"`
+	Title             string            `json:"title" gorm:"not null"`
+	Description       *string           `json:"description,omitempty"`
+	PropertyType      PropertyType      `json:"property_type" gorm:"not null;type:varchar(20)"`
+	Bedrooms          int               `json:"bedrooms" gorm:"not null"`
+	Bathrooms         int               `json:"bathrooms" gorm:"not null"`
+	SquareMeters      *float64          `json:"square_meters,omitempty"`
+	RentAmount        float64           `json:"rent_amount" gorm:"not null"`
+	DepositAmount     *float64          `json:"deposit_amount,omitempty"`
+	CountyID          int               `json:"county_id" gorm:"not null"`
+	SubCountyID       *int              `json:"sub_county_id,omitempty"`
+	LocationDetails   *string           `json:"location_details,omitempty"`
+	Latitude          *float64          `json:"latitude,omitempty"`
+	Longitude         *float64          `json:"longitude,omitempty"`
+	Amenities         Amenities         `json:"amenities" gorm:"type:jsonb"`
+	UtilitiesIncluded UtilitiesIncluded `json:"utilities_included" gorm:"type:jsonb"`
+	ParkingSpaces     int               `json:"parking_spaces"`
+	IsFurnished       bool              `json:"is_furnished" gorm:"default:false"`
+	IsAvailable       bool              `json:"is_available" gorm:"default:true"`
+	AvailabilityDate  *time.Time        `json:"availability_date,omitempty"`
+	CreatedAt         time.Time         `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt         time.Time         `json:"updated_at" gorm:"autoUpdateTime"`
+	DeletedAt         gorm.DeletedAt    `json:"-" gorm:"index"`
+
+	// Relationships
+	County    *County         `json:"county,omitempty" gorm:"foreignKey:CountyID"`
+	SubCounty *SubCounty      `json:"sub_county,omitempty" gorm:"foreignKey:SubCountyID"`
+	Landlord  *User           `json:"landlord,omitempty" gorm:"foreignKey:LandlordID"`
+	Images    []*PropertyImage `json:"images,omitempty" gorm:"foreignKey:PropertyID"`
 }
 
 // CreatePropertyRequest represents the request to create a new property
@@ -166,344 +167,133 @@ type PropertySearchFilters struct {
 	Offset           int           `json:"offset,omitempty"`
 }
 
+// BeforeCreate GORM hook to set ID
+func (p *Property) BeforeCreate(tx *gorm.DB) error {
+	if p.ID == uuid.Nil {
+		p.ID = uuid.New()
+	}
+	return nil
+}
+
+// TableName returns the table name for Property model
+func (Property) TableName() string {
+	return "properties"
+}
+
 // PropertyRepository handles database operations for properties
 type PropertyRepository struct {
-	db *sql.DB
+	db *gorm.DB
 }
 
 // NewPropertyRepository creates a new property repository
-func NewPropertyRepository(db *sql.DB) *PropertyRepository {
+func NewPropertyRepository(db *gorm.DB) *PropertyRepository {
 	return &PropertyRepository{db: db}
 }
 
 // Create creates a new property
 func (r *PropertyRepository) Create(property *Property) error {
-	query := `
-		INSERT INTO properties (
-			id, landlord_id, title, description, property_type, bedrooms, bathrooms,
-			square_meters, rent_amount, deposit_amount, county_id, sub_county_id,
-			location_details, latitude, longitude, amenities, utilities_included,
-			parking_spaces, is_furnished, is_available, availability_date, created_at, updated_at
-		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
-		) RETURNING id, created_at, updated_at`
-
-	property.ID = uuid.New()
-	property.IsAvailable = true
-	now := time.Now()
-	property.CreatedAt = now
-	property.UpdatedAt = now
-
-	err := r.db.QueryRow(
-		query,
-		property.ID,
-		property.LandlordID,
-		property.Title,
-		property.Description,
-		property.PropertyType,
-		property.Bedrooms,
-		property.Bathrooms,
-		property.SquareMeters,
-		property.RentAmount,
-		property.DepositAmount,
-		property.CountyID,
-		property.SubCountyID,
-		property.LocationDetails,
-		property.Latitude,
-		property.Longitude,
-		property.Amenities,
-		property.UtilitiesIncluded,
-		property.ParkingSpaces,
-		property.IsFurnished,
-		property.IsAvailable,
-		property.AvailabilityDate,
-		property.CreatedAt,
-		property.UpdatedAt,
-	).Scan(&property.ID, &property.CreatedAt, &property.UpdatedAt)
-
-	return err
+	return r.db.Create(property).Error
 }
 
 // GetByID retrieves a property by ID
 func (r *PropertyRepository) GetByID(id uuid.UUID) (*Property, error) {
-	property := &Property{}
-	query := `
-		SELECT p.id, p.landlord_id, p.title, p.description, p.property_type, p.bedrooms,
-			   p.bathrooms, p.square_meters, p.rent_amount, p.deposit_amount, p.county_id,
-			   p.sub_county_id, p.location_details, p.latitude, p.longitude, p.amenities,
-			   p.utilities_included, p.parking_spaces, p.is_furnished, p.is_available,
-			   p.availability_date, p.created_at, p.updated_at
-		FROM properties p
-		WHERE p.id = $1`
-
-	err := r.db.QueryRow(query, id).Scan(
-		&property.ID,
-		&property.LandlordID,
-		&property.Title,
-		&property.Description,
-		&property.PropertyType,
-		&property.Bedrooms,
-		&property.Bathrooms,
-		&property.SquareMeters,
-		&property.RentAmount,
-		&property.DepositAmount,
-		&property.CountyID,
-		&property.SubCountyID,
-		&property.LocationDetails,
-		&property.Latitude,
-		&property.Longitude,
-		&property.Amenities,
-		&property.UtilitiesIncluded,
-		&property.ParkingSpaces,
-		&property.IsFurnished,
-		&property.IsAvailable,
-		&property.AvailabilityDate,
-		&property.CreatedAt,
-		&property.UpdatedAt,
-	)
-
+	var property Property
+	err := r.db.Preload("County").Preload("SubCounty").Preload("Landlord").Preload("Images").First(&property, "id = ?", id).Error
 	if err != nil {
 		return nil, err
 	}
-
-	return property, nil
+	return &property, nil
 }
 
 // GetByLandlordID retrieves properties by landlord ID
 func (r *PropertyRepository) GetByLandlordID(landlordID uuid.UUID, limit, offset int) ([]*Property, error) {
-	query := `
-		SELECT p.id, p.landlord_id, p.title, p.description, p.property_type, p.bedrooms,
-			   p.bathrooms, p.square_meters, p.rent_amount, p.deposit_amount, p.county_id,
-			   p.sub_county_id, p.location_details, p.latitude, p.longitude, p.amenities,
-			   p.utilities_included, p.parking_spaces, p.is_furnished, p.is_available,
-			   p.availability_date, p.created_at, p.updated_at
-		FROM properties p
-		WHERE p.landlord_id = $1
-		ORDER BY p.created_at DESC
-		LIMIT $2 OFFSET $3`
-
-	rows, err := r.db.Query(query, landlordID, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
 	var properties []*Property
-	for rows.Next() {
-		property := &Property{}
-		err := rows.Scan(
-			&property.ID,
-			&property.LandlordID,
-			&property.Title,
-			&property.Description,
-			&property.PropertyType,
-			&property.Bedrooms,
-			&property.Bathrooms,
-			&property.SquareMeters,
-			&property.RentAmount,
-			&property.DepositAmount,
-			&property.CountyID,
-			&property.SubCountyID,
-			&property.LocationDetails,
-			&property.Latitude,
-			&property.Longitude,
-			&property.Amenities,
-			&property.UtilitiesIncluded,
-			&property.ParkingSpaces,
-			&property.IsFurnished,
-			&property.IsAvailable,
-			&property.AvailabilityDate,
-			&property.CreatedAt,
-			&property.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		properties = append(properties, property)
+	query := r.db.Preload("County").Preload("SubCounty").Preload("Landlord").Preload("Images").Where("landlord_id = ?", landlordID).Order("created_at DESC")
+
+	if limit > 0 {
+		query = query.Limit(limit)
 	}
 
-	return properties, nil
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+
+	result := query.Find(&properties)
+	return properties, result.Error
 }
 
 // Update updates a property
 func (r *PropertyRepository) Update(property *Property) error {
-	query := `
-		UPDATE properties
-		SET title = $2, description = $3, bedrooms = $4, bathrooms = $5, square_meters = $6,
-			rent_amount = $7, deposit_amount = $8, location_details = $9, latitude = $10,
-			longitude = $11, amenities = $12, utilities_included = $13, parking_spaces = $14,
-			is_furnished = $15, is_available = $16, availability_date = $17, updated_at = $18
-		WHERE id = $1`
-
-	property.UpdatedAt = time.Now()
-
-	_, err := r.db.Exec(
-		query,
-		property.ID,
-		property.Title,
-		property.Description,
-		property.Bedrooms,
-		property.Bathrooms,
-		property.SquareMeters,
-		property.RentAmount,
-		property.DepositAmount,
-		property.LocationDetails,
-		property.Latitude,
-		property.Longitude,
-		property.Amenities,
-		property.UtilitiesIncluded,
-		property.ParkingSpaces,
-		property.IsFurnished,
-		property.IsAvailable,
-		property.AvailabilityDate,
-		property.UpdatedAt,
-	)
-
-	return err
+	return r.db.Save(property).Error
 }
 
 // Delete deletes a property
 func (r *PropertyRepository) Delete(id uuid.UUID) error {
-	query := `DELETE FROM properties WHERE id = $1`
-	_, err := r.db.Exec(query, id)
-	return err
+	return r.db.Delete(&Property{}, id).Error
 }
 
 // Search searches for properties based on filters
 func (r *PropertyRepository) Search(filters *PropertySearchFilters) ([]*Property, error) {
-	baseQuery := `
-		SELECT p.id, p.landlord_id, p.title, p.description, p.property_type, p.bedrooms,
-			   p.bathrooms, p.square_meters, p.rent_amount, p.deposit_amount, p.county_id,
-			   p.sub_county_id, p.location_details, p.latitude, p.longitude, p.amenities,
-			   p.utilities_included, p.parking_spaces, p.is_furnished, p.is_available,
-			   p.availability_date, p.created_at, p.updated_at
-		FROM properties p
-		WHERE 1=1`
+	var properties []*Property
+	query := r.db.Model(&Property{}).Preload("County").Preload("SubCounty").Preload("Landlord").Preload("Images")
 
-	var args []interface{}
-	argIndex := 1
-
-	// Build dynamic WHERE clause based on filters
 	if filters.CountyID != nil {
-		baseQuery += fmt.Sprintf(" AND p.county_id = $%d", argIndex)
-		args = append(args, *filters.CountyID)
-		argIndex++
+		query = query.Where("county_id = ?", *filters.CountyID)
 	}
 
 	if filters.SubCountyID != nil {
-		baseQuery += fmt.Sprintf(" AND p.sub_county_id = $%d", argIndex)
-		args = append(args, *filters.SubCountyID)
-		argIndex++
+		query = query.Where("sub_county_id = ?", *filters.SubCountyID)
 	}
 
 	if filters.PropertyType != nil {
-		baseQuery += fmt.Sprintf(" AND p.property_type = $%d", argIndex)
-		args = append(args, *filters.PropertyType)
-		argIndex++
+		query = query.Where("property_type = ?", *filters.PropertyType)
 	}
 
 	if filters.MinRent != nil {
-		baseQuery += fmt.Sprintf(" AND p.rent_amount >= $%d", argIndex)
-		args = append(args, *filters.MinRent)
-		argIndex++
+		query = query.Where("rent_amount >= ?", *filters.MinRent)
 	}
 
 	if filters.MaxRent != nil {
-		baseQuery += fmt.Sprintf(" AND p.rent_amount <= $%d", argIndex)
-		args = append(args, *filters.MaxRent)
-		argIndex++
+		query = query.Where("rent_amount <= ?", *filters.MaxRent)
 	}
 
 	if filters.MinBedrooms != nil {
-		baseQuery += fmt.Sprintf(" AND p.bedrooms >= $%d", argIndex)
-		args = append(args, *filters.MinBedrooms)
-		argIndex++
+		query = query.Where("bedrooms >= ?", *filters.MinBedrooms)
 	}
 
 	if filters.MaxBedrooms != nil {
-		baseQuery += fmt.Sprintf(" AND p.bedrooms <= $%d", argIndex)
-		args = append(args, *filters.MaxBedrooms)
-		argIndex++
+		query = query.Where("bedrooms <= ?", *filters.MaxBedrooms)
 	}
 
 	if filters.MinBathrooms != nil {
-		baseQuery += fmt.Sprintf(" AND p.bathrooms >= $%d", argIndex)
-		args = append(args, *filters.MinBathrooms)
-		argIndex++
+		query = query.Where("bathrooms >= ?", *filters.MinBathrooms)
 	}
 
 	if filters.IsFurnished != nil {
-		baseQuery += fmt.Sprintf(" AND p.is_furnished = $%d", argIndex)
-		args = append(args, *filters.IsFurnished)
-		argIndex++
+		query = query.Where("is_furnished = ?", *filters.IsFurnished)
 	}
 
 	if filters.HasParkingSpaces != nil && *filters.HasParkingSpaces {
-		baseQuery += " AND p.parking_spaces > 0"
+		query = query.Where("parking_spaces > 0")
 	}
 
 	if filters.IsAvailable != nil {
-		baseQuery += fmt.Sprintf(" AND p.is_available = $%d", argIndex)
-		args = append(args, *filters.IsAvailable)
-		argIndex++
+		query = query.Where("is_available = ?", *filters.IsAvailable)
 	}
 
-	baseQuery += " ORDER BY p.created_at DESC"
+	query = query.Order("created_at DESC")
 
-	// Add pagination
+	// Set default limit if not provided
 	limit := 20
 	if filters.Limit > 0 {
 		limit = filters.Limit
 	}
-	baseQuery += fmt.Sprintf(" LIMIT $%d", argIndex)
-	args = append(args, limit)
-	argIndex++
+	query = query.Limit(limit)
 
 	if filters.Offset > 0 {
-		baseQuery += fmt.Sprintf(" OFFSET $%d", argIndex)
-		args = append(args, filters.Offset)
+		query = query.Offset(filters.Offset)
 	}
 
-	rows, err := r.db.Query(baseQuery, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var properties []*Property
-	for rows.Next() {
-		property := &Property{}
-		err := rows.Scan(
-			&property.ID,
-			&property.LandlordID,
-			&property.Title,
-			&property.Description,
-			&property.PropertyType,
-			&property.Bedrooms,
-			&property.Bathrooms,
-			&property.SquareMeters,
-			&property.RentAmount,
-			&property.DepositAmount,
-			&property.CountyID,
-			&property.SubCountyID,
-			&property.LocationDetails,
-			&property.Latitude,
-			&property.Longitude,
-			&property.Amenities,
-			&property.UtilitiesIncluded,
-			&property.ParkingSpaces,
-			&property.IsFurnished,
-			&property.IsAvailable,
-			&property.AvailabilityDate,
-			&property.CreatedAt,
-			&property.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		properties = append(properties, property)
-	}
-
-	return properties, nil
+	err := query.Find(&properties).Error
+	return properties, err
 }
-

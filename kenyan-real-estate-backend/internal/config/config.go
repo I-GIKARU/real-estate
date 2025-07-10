@@ -8,11 +8,13 @@ import (
 
 // Config holds all configuration for the application
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	JWT      JWTConfig
-	Upload   UploadConfig
-	MPesa    MPesaConfig
+	Server    ServerConfig
+	Database  DatabaseConfig
+	JWT       JWTConfig
+	Upload    UploadConfig
+	Cloudinary CloudinaryConfig
+	MPesa     MPesaConfig
+	Email     EmailConfig
 }
 
 // ServerConfig holds server-related configuration
@@ -24,12 +26,13 @@ type ServerConfig struct {
 
 // DatabaseConfig holds database connection configuration
 type DatabaseConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
+	Host        string
+	Port        int
+	User        string
+	Password    string
+	DBName      string
+	SSLMode     string
+	Environment string
 }
 
 // JWTConfig holds JWT-related configuration
@@ -40,9 +43,17 @@ type JWTConfig struct {
 
 // UploadConfig holds file upload configuration
 type UploadConfig struct {
-	MaxFileSize int64
+	MaxFileSize  int64
 	AllowedTypes []string
-	UploadDir   string
+	UploadDir    string
+}
+
+// CloudinaryConfig holds Cloudinary service configuration
+type CloudinaryConfig struct {
+	CloudName string
+	APIKey    string
+	APISecret string
+	Folder    string
 }
 
 // MPesaConfig holds M-Pesa integration configuration
@@ -54,6 +65,17 @@ type MPesaConfig struct {
 	ShortCode      string
 }
 
+// EmailConfig holds email service configuration
+type EmailConfig struct {
+	Host         string
+	Port         int
+	Username     string
+	Password     string
+	FromEmail    string
+	SupportEmail string
+	BaseURL      string
+}
+
 // Load loads configuration from environment variables
 func Load() (*Config, error) {
 	config := &Config{
@@ -63,12 +85,13 @@ func Load() (*Config, error) {
 			Env:  getEnv("APP_ENV", "development"),
 		},
 		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnvAsInt("DB_PORT", 5432),
-			User:     getEnv("DB_USER", "postgres"),
-			Password: getEnv("DB_PASSWORD", ""),
-			DBName:   getEnv("DB_NAME", "kenyan_real_estate"),
-			SSLMode:  getEnv("DB_SSL_MODE", "disable"),
+			Host:        getEnv("DB_HOST", "localhost"),
+			Port:        getEnvAsInt("DB_PORT", 5432),
+			User:        getEnv("DB_USER", "postgres"),
+			Password:    getEnv("DB_PASSWORD", ""),
+			DBName:      getEnv("DB_NAME", "kenyan_real_estate"),
+			SSLMode:     getEnv("DB_SSL_MODE", "disable"),
+			Environment: getEnv("APP_ENV", "development"),
 		},
 		JWT: JWTConfig{
 			Secret:      getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
@@ -76,8 +99,14 @@ func Load() (*Config, error) {
 		},
 		Upload: UploadConfig{
 			MaxFileSize:  getEnvAsInt64("MAX_FILE_SIZE", 10*1024*1024), // 10MB
-			AllowedTypes: []string{"image/jpeg", "image/png", "image/webp"},
+			AllowedTypes: []string{"image/jpeg", "image/png", "image/webp", "image/jpg"},
 			UploadDir:    getEnv("UPLOAD_DIR", "./uploads"),
+		},
+		Cloudinary: CloudinaryConfig{
+			CloudName: getEnv("CLOUDINARY_CLOUD_NAME", ""),
+			APIKey:    getEnv("CLOUDINARY_API_KEY", ""),
+			APISecret: getEnv("CLOUDINARY_API_SECRET", ""),
+			Folder:    getEnv("CLOUDINARY_FOLDER", "real-estate-properties"),
 		},
 		MPesa: MPesaConfig{
 			ConsumerKey:    getEnv("MPESA_CONSUMER_KEY", ""),
@@ -85,6 +114,15 @@ func Load() (*Config, error) {
 			Environment:    getEnv("MPESA_ENVIRONMENT", "sandbox"),
 			PassKey:        getEnv("MPESA_PASS_KEY", ""),
 			ShortCode:      getEnv("MPESA_SHORT_CODE", ""),
+		},
+		Email: EmailConfig{
+			Host:         getEnv("EMAIL_HOST", "smtp.gmail.com"),
+			Port:         getEnvAsInt("EMAIL_PORT", 587),
+			Username:     getEnv("EMAIL_USERNAME", ""),
+			Password:     getEnv("EMAIL_PASSWORD", ""),
+			FromEmail:    getEnv("EMAIL_FROM", "noreply@kenyanrealestate.com"),
+			SupportEmail: getEnv("EMAIL_SUPPORT", "support@kenyanrealestate.com"),
+			BaseURL:      getEnv("BASE_URL", "http://localhost:3000"),
 		},
 	}
 

@@ -26,6 +26,17 @@ func NewUserHandler(userRepo *models.UserRepository, jwtManager *auth.JWTManager
 }
 
 // Register handles user registration
+// @Summary Register a new user
+// @Description Create a new user account with email, password, and profile information
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param user body models.CreateUserRequest true "User registration data"
+// @Success 201 {object} object{message=string,user=models.UserResponse,token=string} "User created successfully"
+// @Failure 400 {object} object{error=string,details=string} "Invalid request data"
+// @Failure 409 {object} object{error=string} "Email or phone already exists"
+// @Failure 500 {object} object{error=string} "Internal server error"
+// @Router /register [post]
 func (h *UserHandler) Register(c *gin.Context) {
 	var req models.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -73,7 +84,6 @@ func (h *UserHandler) Register(c *gin.Context) {
 		LastName:    req.LastName,
 		PhoneNumber: req.PhoneNumber,
 		UserType:    req.UserType,
-		IDNumber:    req.IDNumber,
 	}
 
 	// Hash password
@@ -102,13 +112,25 @@ func (h *UserHandler) Register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "User created successfully",
+		"message": "User created successfully. Please verify your email address.",
 		"user":    user.ToResponse(),
 		"token":   token,
+		"email_verification_required": true,
 	})
 }
 
 // Login handles user login
+// @Summary User login
+// @Description Authenticate user with email and password
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param credentials body models.LoginRequest true "User login credentials"
+// @Success 200 {object} object{message=string,user=models.UserResponse,token=string} "Login successful"
+// @Failure 400 {object} object{error=string,details=string} "Invalid request data"
+// @Failure 401 {object} object{error=string} "Invalid credentials or account deactivated"
+// @Failure 500 {object} object{error=string} "Internal server error"
+// @Router /login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -167,6 +189,17 @@ func (h *UserHandler) Login(c *gin.Context) {
 }
 
 // GetProfile handles getting user profile
+// @Summary Get user profile
+// @Description Get the profile of the currently authenticated user
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} object{user=models.UserResponse} "User profile"
+// @Failure 401 {object} object{error=string} "Unauthorized"
+// @Failure 404 {object} object{error=string} "User not found"
+// @Failure 500 {object} object{error=string} "Internal server error"
+// @Router /profile [get]
 func (h *UserHandler) GetProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -204,6 +237,20 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 }
 
 // UpdateProfile handles updating user profile
+// @Summary Update user profile
+// @Description Update the profile information of the currently authenticated user
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param updates body object{first_name=string,last_name=string,phone_number=string,id_number=string,profile_image_url=string} true "Profile updates"
+// @Success 200 {object} object{message=string,user=models.UserResponse} "Profile updated successfully"
+// @Failure 400 {object} object{error=string,details=string} "Invalid request data"
+// @Failure 401 {object} object{error=string} "Unauthorized"
+// @Failure 404 {object} object{error=string} "User not found"
+// @Failure 409 {object} object{error=string} "Phone number already exists"
+// @Failure 500 {object} object{error=string} "Internal server error"
+// @Router /profile [put]
 func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -277,9 +324,6 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 		}
 		user.PhoneNumber = *updateData.PhoneNumber
 	}
-	if updateData.IDNumber != nil {
-		user.IDNumber = updateData.IDNumber
-	}
 	if updateData.ProfileImageURL != nil {
 		user.ProfileImageURL = updateData.ProfileImageURL
 	}
@@ -299,6 +343,16 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 }
 
 // RefreshToken handles token refresh
+// @Summary Refresh JWT token
+// @Description Refresh an expired JWT token to get a new one
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param token body object{token=string} true "Refresh token request"
+// @Success 200 {object} object{token=string} "Token refreshed successfully"
+// @Failure 400 {object} object{error=string,details=string} "Invalid request data"
+// @Failure 401 {object} object{error=string,details=string} "Failed to refresh token"
+// @Router /refresh-token [post]
 func (h *UserHandler) RefreshToken(c *gin.Context) {
 	var req struct {
 		Token string `json:"token" binding:"required"`

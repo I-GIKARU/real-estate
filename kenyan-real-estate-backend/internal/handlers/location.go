@@ -25,6 +25,14 @@ func NewLocationHandler(countyRepo *models.CountyRepository, subCountyRepo *mode
 }
 
 // GetCounties handles getting all counties
+// @Summary Get all counties
+// @Description Get a list of all counties in Kenya
+// @Tags Location
+// @Accept json
+// @Produce json
+// @Success 200 {object} object{counties=[]models.County} "List of counties"
+// @Failure 500 {object} object{error=string} "Internal server error"
+// @Router /counties [get]
 func (h *LocationHandler) GetCounties(c *gin.Context) {
 	counties, err := h.countyRepo.GetAll()
 	if err != nil {
@@ -40,6 +48,17 @@ func (h *LocationHandler) GetCounties(c *gin.Context) {
 }
 
 // GetCounty handles getting a single county by ID
+// @Summary Get county by ID
+// @Description Get detailed information about a specific county
+// @Tags Location
+// @Accept json
+// @Produce json
+// @Param id path int true "County ID"
+// @Success 200 {object} object{county=models.County} "County details"
+// @Failure 400 {object} object{error=string} "Invalid county ID"
+// @Failure 404 {object} object{error=string} "County not found"
+// @Failure 500 {object} object{error=string} "Internal server error"
+// @Router /counties/{id} [get]
 func (h *LocationHandler) GetCounty(c *gin.Context) {
 	countyIDStr := c.Param("id")
 	countyID, err := strconv.Atoi(countyIDStr)
@@ -70,6 +89,17 @@ func (h *LocationHandler) GetCounty(c *gin.Context) {
 }
 
 // GetSubCounties handles getting sub-counties by county ID
+// @Summary Get sub-counties by county ID
+// @Description Get all sub-counties within a specific county
+// @Tags Location
+// @Accept json
+// @Produce json
+// @Param id path int true "County ID"
+// @Success 200 {object} object{sub_counties=[]models.SubCounty,county_id=int} "List of sub-counties"
+// @Failure 400 {object} object{error=string} "Invalid county ID"
+// @Failure 404 {object} object{error=string} "County not found"
+// @Failure 500 {object} object{error=string} "Internal server error"
+// @Router /counties/{id}/sub-counties [get]
 func (h *LocationHandler) GetSubCounties(c *gin.Context) {
 	countyIDStr := c.Param("county_id")
 	countyID, err := strconv.Atoi(countyIDStr)
@@ -110,6 +140,17 @@ func (h *LocationHandler) GetSubCounties(c *gin.Context) {
 }
 
 // GetSubCounty handles getting a single sub-county by ID
+// @Summary Get sub-county by ID
+// @Description Get detailed information about a specific sub-county
+// @Tags Location
+// @Accept json
+// @Produce json
+// @Param id path int true "Sub-county ID"
+// @Success 200 {object} object{sub_county=models.SubCounty} "Sub-county details"
+// @Failure 400 {object} object{error=string} "Invalid sub-county ID"
+// @Failure 404 {object} object{error=string} "Sub-county not found"
+// @Failure 500 {object} object{error=string} "Internal server error"
+// @Router /sub-counties/{id} [get]
 func (h *LocationHandler) GetSubCounty(c *gin.Context) {
 	subCountyIDStr := c.Param("id")
 	subCountyID, err := strconv.Atoi(subCountyIDStr)

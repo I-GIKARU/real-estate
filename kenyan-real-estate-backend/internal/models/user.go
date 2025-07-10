@@ -1,11 +1,11 @@
 package models
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // UserType represents the type of user
@@ -19,19 +19,22 @@ const (
 
 // User represents a user in the system
 type User struct {
-	ID              uuid.UUID  `json:"id" db:"id"`
-	Email           string     `json:"email" db:"email"`
-	PasswordHash    string     `json:"-" db:"password_hash"`
-	FirstName       string     `json:"first_name" db:"first_name"`
-	LastName        string     `json:"last_name" db:"last_name"`
-	PhoneNumber     string     `json:"phone_number" db:"phone_number"`
-	UserType        UserType   `json:"user_type" db:"user_type"`
-	IDNumber        *string    `json:"id_number,omitempty" db:"id_number"`
-	ProfileImageURL *string    `json:"profile_image_url,omitempty" db:"profile_image_url"`
-	IsVerified      bool       `json:"is_verified" db:"is_verified"`
-	IsActive        bool       `json:"is_active" db:"is_active"`
-	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
+	ID              uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	Email           string     `json:"email" gorm:"uniqueIndex;not null"`
+	PasswordHash    string     `json:"-" gorm:"not null"`
+	FirstName       string     `json:"first_name" gorm:"not null"`
+	LastName        string     `json:"last_name" gorm:"not null"`
+	PhoneNumber     string     `json:"phone_number" gorm:"uniqueIndex;not null"`
+	UserType        UserType   `json:"user_type" gorm:"not null;type:varchar(20)"`
+	ProfileImageURL *string    `json:"profile_image_url,omitempty"`
+	IsVerified      bool       `json:"is_verified" gorm:"default:false"`
+	IsActive        bool       `json:"is_active" gorm:"default:true"`
+	CreatedAt       time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt       time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+	DeletedAt       gorm.DeletedAt `json:"-" gorm:"index"`
+	
+	// Relationships
+	Properties []Property `json:"properties,omitempty" gorm:"foreignKey:LandlordID"`
 }
 
 // CreateUserRequest represents the request to create a new user
@@ -59,7 +62,6 @@ type UserResponse struct {
 	LastName        string    `json:"last_name"`
 	PhoneNumber     string    `json:"phone_number"`
 	UserType        UserType  `json:"user_type"`
-	IDNumber        *string   `json:"id_number,omitempty"`
 	ProfileImageURL *string   `json:"profile_image_url,omitempty"`
 	IsVerified      bool      `json:"is_verified"`
 	IsActive        bool      `json:"is_active"`
@@ -76,7 +78,6 @@ func (u *User) ToResponse() *UserResponse {
 		LastName:        u.LastName,
 		PhoneNumber:     u.PhoneNumber,
 		UserType:        u.UserType,
-		IDNumber:        u.IDNumber,
 		ProfileImageURL: u.ProfileImageURL,
 		IsVerified:      u.IsVerified,
 		IsActive:        u.IsActive,
@@ -101,154 +102,75 @@ func (u *User) CheckPassword(password string) bool {
 	return err == nil
 }
 
+// BeforeCreate GORM hook to set ID and hash password
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
+	return nil
+}
+
+// TableName returns the table name for User model
+func (User) TableName() string {
+	return "users"
+}
+
 // UserRepository handles database operations for users
 type UserRepository struct {
-	db *sql.DB
+	db *gorm.DB
 }
 
 // NewUserRepository creates a new user repository
-func NewUserRepository(db *sql.DB) *UserRepository {
+func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
 // Create creates a new user
 func (r *UserRepository) Create(user *User) error {
-	query := `
-		INSERT INTO users (id, email, password_hash, first_name, last_name, phone_number, user_type, id_number, is_verified, is_active, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-		RETURNING id, created_at, updated_at`
-
-	user.ID = uuid.New()
-	user.IsVerified = false
-	user.IsActive = true
-	now := time.Now()
-	user.CreatedAt = now
-	user.UpdatedAt = now
-
-	err := r.db.QueryRow(
-		query,
-		user.ID,
-		user.Email,
-		user.PasswordHash,
-		user.FirstName,
-		user.LastName,
-		user.PhoneNumber,
-		user.UserType,
-		user.IDNumber,
-		user.IsVerified,
-		user.IsActive,
-		user.CreatedAt,
-		user.UpdatedAt,
-	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
-
-	return err
+	return r.db.Create(user).Error
 }
 
 // GetByID retrieves a user by ID
 func (r *UserRepository) GetByID(id uuid.UUID) (*User, error) {
-	user := &User{}
-	query := `
-		SELECT id, email, password_hash, first_name, last_name, phone_number, user_type, id_number, profile_image_url, is_verified, is_active, created_at, updated_at
-		FROM users
-		WHERE id = $1 AND is_active = true`
-
-	err := r.db.QueryRow(query, id).Scan(
-		&user.ID,
-		&user.Email,
-		&user.PasswordHash,
-		&user.FirstName,
-		&user.LastName,
-		&user.PhoneNumber,
-		&user.UserType,
-		&user.IDNumber,
-		&user.ProfileImageURL,
-		&user.IsVerified,
-		&user.IsActive,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
+	var user User
+	err := r.db.Where("id = ? AND is_active = ?", id, true).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
-
-	return user, nil
+	return &user, nil
 }
 
 // GetByEmail retrieves a user by email
 func (r *UserRepository) GetByEmail(email string) (*User, error) {
-	user := &User{}
-	query := `
-		SELECT id, email, password_hash, first_name, last_name, phone_number, user_type, id_number, profile_image_url, is_verified, is_active, created_at, updated_at
-		FROM users
-		WHERE email = $1 AND is_active = true`
-
-	err := r.db.QueryRow(query, email).Scan(
-		&user.ID,
-		&user.Email,
-		&user.PasswordHash,
-		&user.FirstName,
-		&user.LastName,
-		&user.PhoneNumber,
-		&user.UserType,
-		&user.IDNumber,
-		&user.ProfileImageURL,
-		&user.IsVerified,
-		&user.IsActive,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
+	var user User
+	err := r.db.Where("email = ? AND is_active = ?", email, true).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
-
-	return user, nil
+	return &user, nil
 }
 
 // Update updates a user
 func (r *UserRepository) Update(user *User) error {
-	query := `
-		UPDATE users
-		SET first_name = $2, last_name = $3, phone_number = $4, id_number = $5, profile_image_url = $6, updated_at = $7
-		WHERE id = $1`
-
-	user.UpdatedAt = time.Now()
-
-	_, err := r.db.Exec(
-		query,
-		user.ID,
-		user.FirstName,
-		user.LastName,
-		user.PhoneNumber,
-		user.IDNumber,
-		user.ProfileImageURL,
-		user.UpdatedAt,
-	)
-
-	return err
+	return r.db.Save(user).Error
 }
 
 // Delete soft deletes a user
 func (r *UserRepository) Delete(id uuid.UUID) error {
-	query := `UPDATE users SET is_active = false, updated_at = $2 WHERE id = $1`
-	_, err := r.db.Exec(query, id, time.Now())
-	return err
+	return r.db.Delete(&User{}, id).Error
 }
 
 // EmailExists checks if an email already exists
 func (r *UserRepository) EmailExists(email string) (bool, error) {
-	var count int
-	query := `SELECT COUNT(*) FROM users WHERE email = $1 AND is_active = true`
-	err := r.db.QueryRow(query, email).Scan(&count)
+	var count int64
+	err := r.db.Model(&User{}).Where("email = ? AND is_active = ?", email, true).Count(&count).Error
 	return count > 0, err
 }
 
 // PhoneExists checks if a phone number already exists
 func (r *UserRepository) PhoneExists(phone string) (bool, error) {
-	var count int
-	query := `SELECT COUNT(*) FROM users WHERE phone_number = $1 AND is_active = true`
-	err := r.db.QueryRow(query, phone).Scan(&count)
+	var count int64
+	err := r.db.Model(&User{}).Where("phone_number = ? AND is_active = ?", phone, true).Count(&count).Error
 	return count > 0, err
 }
 

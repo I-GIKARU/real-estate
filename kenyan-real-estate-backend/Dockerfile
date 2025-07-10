@@ -1,6 +1,9 @@
 # Use the official Go image as build stage
 FROM golang:1.23-alpine AS builder
 
+# Install git (required for some Go modules)
+RUN apk add --no-cache git
+
 # Set working directory
 WORKDIR /app
 
@@ -13,8 +16,8 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/server/main.go
+# Build the application with proper module settings
+RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -a -installsuffix cgo -o main ./cmd/server
 
 # Use a minimal Alpine image for runtime
 FROM alpine:latest

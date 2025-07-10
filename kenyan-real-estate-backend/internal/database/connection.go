@@ -1,36 +1,52 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"kenyan-real-estate-backend/internal/config"
 
-	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 // DB holds the database connection
-var DB *sql.DB
+var DB *gorm.DB
 
 // Connect establishes a connection to the database
 func Connect(cfg *config.DatabaseConfig) error {
 	var err error
 	
 	dsn := cfg.GetDSN()
-	DB, err = sql.Open("postgres", dsn)
+	
+	// Configure GORM logger
+	gormLogger := logger.Default.LogMode(logger.Info)
+	if cfg.Environment == "production" {
+		gormLogger = logger.Default.LogMode(logger.Error)
+	}
+	
+	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: gormLogger,
+		NowFunc: func() time.Time {
+			return time.Now().UTC()
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("failed to open database connection: %w", err)
 	}
 
-	// Test the connection
-	if err = DB.Ping(); err != nil {
-		return fmt.Errorf("failed to ping database: %w", err)
+	// Get underlying sql.DB to configure connection pool
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get underlying sql.DB: %w", err)
 	}
 
 	// Set connection pool settings
-	DB.SetMaxOpenConns(25)
-	DB.SetMaxIdleConns(25)
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(25)
+	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	log.Println("Database connection established successfully")
 	return nil
@@ -39,13 +55,25 @@ func Connect(cfg *config.DatabaseConfig) error {
 // Close closes the database connection
 func Close() error {
 	if DB != nil {
-		return DB.Close()
+		sqlDB, err := DB.DB()
+		if err != nil {
+			return err
+		}
+		return sqlDB.Close()
 	}
 	return nil
 }
 
 // GetDB returns the database connection
-func GetDB() *sql.DB {
+func GetDB() *gorm.DB {
 	return DB
+}
+
+// AutoMigrate runs database migrations
+func AutoMigrate(models ...interface{}) error {
+	if DB == nil {
+		return fmt.Errorf("database connection not established")
+	}
+	return DB.AutoMigrate(models...)
 }
 
