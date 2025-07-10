@@ -290,3 +290,175 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 		"user": user.ToResponse(),
 	})
 }
+
+// GetPendingAgents handles getting all agents waiting for approval (admin only)
+// @Summary Get pending agents
+// @Description Get all agents waiting for admin approval
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} object{agents=[]models.UserResponse} "Pending agents"
+// @Failure 401 {object} object{error=string} "Unauthorized"
+// @Failure 403 {object} object{error=string} "Forbidden - Admin access required"
+// @Failure 500 {object} object{error=string} "Internal server error"
+// @Router /admin/pending-agents [get]
+func (h *UserHandler) GetPendingAgents(c *gin.Context) {
+	// Check if user is admin
+	if !h.isAdmin(c) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Admin access required",
+		})
+		return
+	}
+
+	// Get pending agents
+	agents, err := h.userRepo.GetPendingAgents()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get pending agents",
+		})
+		return
+	}
+
+	// Convert to response format
+	var agentResponses []models.UserResponse
+	for _, agent := range agents {
+		agentResponses = append(agentResponses, *agent.ToResponse())
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"agents": agentResponses,
+	})
+}
+
+// ApproveAgent handles approving an agent (admin only)
+// @Summary Approve an agent
+// @Description Approve an agent to allow property management
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param agentId path string true "Agent ID"
+// @Success 200 {object} object{message=string,agent=models.UserResponse} "Agent approved successfully"
+// @Failure 400 {object} object{error=string} "Invalid agent ID"
+// @Failure 401 {object} object{error=string} "Unauthorized"
+// @Failure 403 {object} object{error=string} "Forbidden - Admin access required"
+// @Failure 404 {object} object{error=string} "Agent not found"
+// @Failure 500 {object} object{error=string} "Internal server error"
+// @Router /admin/approve-agent/{agentId} [post]
+func (h *UserHandler) ApproveAgent(c *gin.Context) {
+	// Check if user is admin
+	adminID, isAdmin := h.getAdminID(c)
+	if !isAdmin {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Admin access required",
+		})
+		return
+	}
+
+	// Get agent ID from URL
+	agentIDStr := c.Param("agentId")
+	agentID, err := uuid.Parse(agentIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid agent ID",
+		})
+		return
+	}
+
+	// Approve the agent
+	err = h.userRepo.ApproveAgent(agentID, adminID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to approve agent",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Get updated agent data
+	agent, err := h.userRepo.GetByID(agentID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Agent not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Agent approved successfully",
+		"agent":   agent.ToResponse(),
+	})
+}
+
+// GetAllAgents handles getting all agents (admin only)
+// @Summary Get all agents
+// @Description Get all agents (approved and pending)
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} object{agents=[]models.UserResponse} "All agents"
+// @Failure 401 {object} object{error=string} "Unauthorized"
+// @Failure 403 {object} object{error=string} "Forbidden - Admin access required"
+// @Failure 500 {object} object{error=string} "Internal server error"
+// @Router /admin/agents [get]
+func (h *UserHandler) GetAllAgents(c *gin.Context) {
+	// Check if user is admin
+	if !h.isAdmin(c) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Admin access required",
+		})
+		return
+	}
+
+	// Get all agents
+	agents, err := h.userRepo.GetAllAgents()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get agents",
+		})
+		return
+	}
+
+	// Convert to response format
+	var agentResponses []models.UserResponse
+	for _, agent := range agents {
+		agentResponses = append(agentResponses, *agent.ToResponse())
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"agents": agentResponses,
+	})
+}
+
+// Helper functions
+
+// isAdmin checks if the current user is an admin
+func (h *UserHandler) isAdmin(c *gin.Context) bool {
+	userType, exists := c.Get("user_type")
+	if !exists {
+		return false
+	}
+	return userType == string(models.UserTypeAdmin)
+}
+
+// getAdminID gets the admin ID if the current user is an admin
+func (h *UserHandler) getAdminID(c *gin.Context) (uuid.UUID, bool) {
+	if !h.isAdmin(c) {
+		return uuid.Nil, false
+	}
+	
+	userID, exists := c.Get("user_id")
+	if !exists {
+		return uuid.Nil, false
+	}
+	
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		return uuid.Nil, false
+	}
+	
+	return userUUID, true
+}

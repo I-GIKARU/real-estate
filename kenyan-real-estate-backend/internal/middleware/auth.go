@@ -145,6 +145,52 @@ func RequireVerifiedEmail(userRepo UserRepositoryInterface) gin.HandlerFunc {
 			return
 		}
 
+	c.Next()
+	}
+}
+
+// RequireApprovedAgent creates a middleware that requires agents to be approved by admin
+func RequireApprovedAgent(userRepo UserRepositoryInterface) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userIDInterface, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "User ID not found in context",
+			})
+			c.Abort()
+			return
+		}
+
+		// Convert userID to UUID
+		userID, ok := userIDInterface.(uuid.UUID)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Invalid user ID format",
+			})
+			c.Abort()
+			return
+		}
+
+		// Get user from database to check approval status
+		user, err := userRepo.GetByID(userID)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "User not found",
+			})
+			c.Abort()
+			return
+		}
+
+		// Check if user can manage properties (admin always can, agent needs approval)
+		if !user.CanManageProperties() {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "Agent approval required. Please wait for admin approval before managing properties.",
+				"approval_required": true,
+			})
+			c.Abort()
+			return
+		}
+
 		c.Next()
 	}
 }

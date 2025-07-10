@@ -77,7 +77,7 @@ func (u *UtilitiesIncluded) Scan(value interface{}) error {
 // Property represents a rental property
 type Property struct {
 	ID                uuid.UUID         `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	LandlordID        uuid.UUID         `json:"landlord_id" gorm:"type:uuid;not null"`
+	AgentID           uuid.UUID         `json:"agent_id" gorm:"type:uuid;not null"`
 	Title             string            `json:"title" gorm:"not null"`
 	Description       *string           `json:"description,omitempty"`
 	PropertyType      PropertyType      `json:"property_type" gorm:"not null;type:varchar(20)"`
@@ -104,7 +104,7 @@ type Property struct {
 	// Relationships
 	County    *County         `json:"county,omitempty" gorm:"foreignKey:CountyID"`
 	SubCounty *SubCounty      `json:"sub_county,omitempty" gorm:"foreignKey:SubCountyID"`
-	Landlord  *User           `json:"landlord,omitempty" gorm:"foreignKey:LandlordID"`
+	Agent     *User           `json:"agent,omitempty" gorm:"foreignKey:AgentID"`
 	Images    []*PropertyImage `json:"images,omitempty" gorm:"foreignKey:PropertyID"`
 }
 
@@ -198,17 +198,17 @@ func (r *PropertyRepository) Create(property *Property) error {
 // GetByID retrieves a property by ID
 func (r *PropertyRepository) GetByID(id uuid.UUID) (*Property, error) {
 	var property Property
-	err := r.db.Preload("County").Preload("SubCounty").Preload("Landlord").Preload("Images").First(&property, "id = ?", id).Error
+	err := r.db.Preload("County").Preload("SubCounty").Preload("Agent").Preload("Images").First(&property, "id = ?", id).Error
 	if err != nil {
 		return nil, err
 	}
 	return &property, nil
 }
 
-// GetByLandlordID retrieves properties by landlord ID
-func (r *PropertyRepository) GetByLandlordID(landlordID uuid.UUID, limit, offset int) ([]*Property, error) {
+// GetByAgentID retrieves properties by agent ID
+func (r *PropertyRepository) GetByAgentID(agentID uuid.UUID, limit, offset int) ([]*Property, error) {
 	var properties []*Property
-	query := r.db.Preload("County").Preload("SubCounty").Preload("Landlord").Preload("Images").Where("landlord_id = ?", landlordID).Order("created_at DESC")
+	query := r.db.Preload("County").Preload("SubCounty").Preload("Agent").Preload("Images").Where("agent_id = ?", agentID).Order("created_at DESC")
 
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -235,7 +235,7 @@ func (r *PropertyRepository) Delete(id uuid.UUID) error {
 // Search searches for properties based on filters
 func (r *PropertyRepository) Search(filters *PropertySearchFilters) ([]*Property, error) {
 	var properties []*Property
-	query := r.db.Model(&Property{}).Preload("County").Preload("SubCounty").Preload("Landlord").Preload("Images")
+	query := r.db.Model(&Property{}).Preload("County").Preload("SubCounty").Preload("Agent").Preload("Images")
 
 	if filters.CountyID != nil {
 		query = query.Where("county_id = ?", *filters.CountyID)

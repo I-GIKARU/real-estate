@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,9 +13,9 @@ import (
 type UserType string
 
 const (
-	UserTypeLandlord UserType = "landlord"
-	UserTypeTenant   UserType = "tenant"
-	UserTypeAgent    UserType = "agent"
+	UserTypeAdmin  UserType = "admin"
+	UserTypeTenant UserType = "tenant"
+	UserTypeAgent  UserType = "agent"
 )
 
 // User represents a user in the system
@@ -28,13 +29,16 @@ type User struct {
 	UserType        UserType   `json:"user_type" gorm:"not null;type:varchar(20)"`
 	ProfileImageURL *string    `json:"profile_image_url,omitempty"`
 	IsVerified      bool       `json:"is_verified" gorm:"default:false"`
+	IsApproved      bool       `json:"is_approved" gorm:"default:false"` // For agent approval by admin
+	ApprovedAt      *time.Time `json:"approved_at,omitempty"`
+	ApprovedBy      *uuid.UUID `json:"approved_by,omitempty"` // Admin who approved
 	IsActive        bool       `json:"is_active" gorm:"default:true"`
 	CreatedAt       time.Time  `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt       time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedAt       gorm.DeletedAt `json:"-" gorm:"index"`
 	
 	// Relationships
-	Properties []Property `json:"properties,omitempty" gorm:"foreignKey:LandlordID"`
+	Properties []Property `json:"properties,omitempty" gorm:"foreignKey:AgentID"`
 }
 
 // CreateUserRequest represents the request to create a new user
@@ -56,17 +60,19 @@ type LoginRequest struct {
 
 // UserResponse represents the user response (without sensitive data)
 type UserResponse struct {
-	ID              uuid.UUID `json:"id"`
-	Email           string    `json:"email"`
-	FirstName       string    `json:"first_name"`
-	LastName        string    `json:"last_name"`
-	PhoneNumber     string    `json:"phone_number"`
-	UserType        UserType  `json:"user_type"`
-	ProfileImageURL *string   `json:"profile_image_url,omitempty"`
-	IsVerified      bool      `json:"is_verified"`
-	IsActive        bool      `json:"is_active"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              uuid.UUID  `json:"id"`
+	Email           string     `json:"email"`
+	FirstName       string     `json:"first_name"`
+	LastName        string     `json:"last_name"`
+	PhoneNumber     string     `json:"phone_number"`
+	UserType        UserType   `json:"user_type"`
+	ProfileImageURL *string    `json:"profile_image_url,omitempty"`
+	IsVerified      bool       `json:"is_verified"`
+	IsApproved      bool       `json:"is_approved"`
+	ApprovedAt      *time.Time `json:"approved_at,omitempty"`
+	IsActive        bool       `json:"is_active"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 // ToResponse converts User to UserResponse
@@ -80,6 +86,8 @@ func (u *User) ToResponse() *UserResponse {
 		UserType:        u.UserType,
 		ProfileImageURL: u.ProfileImageURL,
 		IsVerified:      u.IsVerified,
+		IsApproved:      u.IsApproved,
+		ApprovedAt:      u.ApprovedAt,
 		IsActive:        u.IsActive,
 		CreatedAt:       u.CreatedAt,
 		UpdatedAt:       u.UpdatedAt,
@@ -105,6 +113,32 @@ func (u *User) CheckPassword(password string) bool {
 // GetIsVerified returns the verification status of the user
 func (u *User) GetIsVerified() bool {
 	return u.IsVerified
+}
+
+// CanManageProperties checks if user can manage properties
+func (u *User) CanManageProperties() bool {
+	// Admins can always manage properties
+	if u.UserType == UserTypeAdmin {
+		return true
+	}
+	// Agents must be approved and verified
+	if u.UserType == UserTypeAgent {
+		return u.IsVerified && u.IsApproved
+	}
+	// Tenants cannot manage properties
+	return false
+}
+
+// ApproveAgent approves an agent (called by admin)
+func (u *User) ApproveAgent(adminID uuid.UUID) error {
+	if u.UserType != UserTypeAgent {
+		return fmt.Errorf("only agents can be approved")
+	}
+	now := time.Now()
+	u.IsApproved = true
+	u.ApprovedAt = &now
+	u.ApprovedBy = &adminID
+	return nil
 }
 
 // BeforeCreate GORM hook to set ID and hash password
@@ -177,5 +211,36 @@ func (r *UserRepository) PhoneExists(phone string) (bool, error) {
 	var count int64
 	err := r.db.Model(&User{}).Where("phone_number = ? AND is_active = ?", phone, true).Count(&count).Error
 	return count > 0, err
+}
+
+// GetPendingAgents returns all agents waiting for approval
+func (r *UserRepository) GetPendingAgents() ([]User, error) {
+	var agents []User
+	err := r.db.Where("user_type = ? AND is_verified = ? AND is_approved = ? AND is_active = ?", 
+		UserTypeAgent, true, false, true).Find(&agents).Error
+	return agents, err
+}
+
+// GetAllAgents returns all agents (approved and pending)
+func (r *UserRepository) GetAllAgents() ([]User, error) {
+	var agents []User
+	err := r.db.Where("user_type = ? AND is_active = ?", UserTypeAgent, true).Find(&agents).Error
+	return agents, err
+}
+
+// ApproveAgent approves an agent by admin
+func (r *UserRepository) ApproveAgent(agentID uuid.UUID, adminID uuid.UUID) error {
+	var agent User
+	err := r.db.Where("id = ? AND user_type = ? AND is_active = ?", agentID, UserTypeAgent, true).First(&agent).Error
+	if err != nil {
+		return err
+	}
+	
+	err = agent.ApproveAgent(adminID)
+	if err != nil {
+		return err
+	}
+	
+	return r.db.Save(&agent).Error
 }
 

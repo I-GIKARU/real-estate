@@ -31,9 +31,9 @@ func NewPropertyHandler(propertyRepo *models.PropertyRepository, propertyImageRe
 	}
 }
 
-// CreateProperty handles property creation (landlord only)
+// CreateProperty handles property creation (agent only)
 // @Summary Create a new property
-// @Description Create a new property listing (landlord only)
+// @Description Create a new property listing (agent only)
 // @Tags Properties
 // @Accept json
 // @Produce json
@@ -53,7 +53,7 @@ func (h *PropertyHandler) CreateProperty(c *gin.Context) {
 		return
 	}
 
-	landlordID, ok := userID.(uuid.UUID)
+	agentID, ok := userID.(uuid.UUID)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Invalid user ID format",
@@ -72,7 +72,7 @@ func (h *PropertyHandler) CreateProperty(c *gin.Context) {
 
 	// Create property
 	property := &models.Property{
-		LandlordID:        landlordID,
+		AgentID:           agentID,
 		Title:             req.Title,
 		Description:       req.Description,
 		PropertyType:      req.PropertyType,
@@ -281,9 +281,9 @@ func (h *PropertyHandler) GetPublicProperties(c *gin.Context) {
 	})
 }
 
-// GetMyProperties handles getting properties for the authenticated landlord
+// GetMyProperties handles getting properties for the authenticated agent
 // @Summary Get my properties
-// @Description Get all properties owned by the authenticated landlord
+// @Description Get all properties managed by the authenticated agent
 // @Tags Properties
 // @Accept json
 // @Produce json
@@ -303,7 +303,7 @@ func (h *PropertyHandler) GetMyProperties(c *gin.Context) {
 		return
 	}
 
-	landlordID, ok := userID.(uuid.UUID)
+	agentID, ok := userID.(uuid.UUID)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Invalid user ID format",
@@ -327,7 +327,7 @@ func (h *PropertyHandler) GetMyProperties(c *gin.Context) {
 		}
 	}
 
-	properties, err := h.propertyRepo.GetByLandlordID(landlordID, limit, offset)
+	properties, err := h.propertyRepo.GetByAgentID(agentID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to get properties",
@@ -373,7 +373,7 @@ func (h *PropertyHandler) UpdateProperty(c *gin.Context) {
 		return
 	}
 
-	landlordID, ok := userID.(uuid.UUID)
+	agentID, ok := userID.(uuid.UUID)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Invalid user ID format",
@@ -406,7 +406,7 @@ func (h *PropertyHandler) UpdateProperty(c *gin.Context) {
 	}
 
 	// Check if user owns the property
-	if property.LandlordID != landlordID {
+	if property.AgentID != agentID {
 		c.JSON(http.StatusForbidden, gin.H{
 			"error": "You can only update your own properties",
 		})
@@ -509,7 +509,7 @@ func (h *PropertyHandler) DeleteProperty(c *gin.Context) {
 		return
 	}
 
-	landlordID, ok := userID.(uuid.UUID)
+	agentID, ok := userID.(uuid.UUID)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Invalid user ID format",
@@ -542,7 +542,7 @@ func (h *PropertyHandler) DeleteProperty(c *gin.Context) {
 	}
 
 	// Check if user owns the property
-	if property.LandlordID != landlordID {
+	if property.AgentID != agentID {
 		c.JSON(http.StatusForbidden, gin.H{
 			"error": "You can only delete your own properties",
 		})
@@ -589,7 +589,7 @@ func (h *PropertyHandler) AddPropertyImage(c *gin.Context) {
 		return
 	}
 
-	landlordID, ok := userID.(uuid.UUID)
+	agentID, ok := userID.(uuid.UUID)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Invalid user ID format",
@@ -621,7 +621,7 @@ func (h *PropertyHandler) AddPropertyImage(c *gin.Context) {
 		return
 	}
 
-	if property.LandlordID != landlordID {
+	if property.AgentID != agentID {
 		c.JSON(http.StatusForbidden, gin.H{
 			"error": "You can only add images to your own properties",
 		})
@@ -714,7 +714,7 @@ func (h *PropertyHandler) DeletePropertyImage(c *gin.Context) {
 		return
 	}
 
-	landlordID, ok := userID.(uuid.UUID)
+	agentID, ok := userID.(uuid.UUID)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Invalid user ID format",
@@ -755,7 +755,7 @@ func (h *PropertyHandler) DeletePropertyImage(c *gin.Context) {
 		return
 	}
 
-	if property.LandlordID != landlordID {
+	if property.AgentID != agentID {
 		c.JSON(http.StatusForbidden, gin.H{
 			"error": "You can only delete images from your own properties",
 		})

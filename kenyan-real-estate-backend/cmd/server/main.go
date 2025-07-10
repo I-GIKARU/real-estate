@@ -174,17 +174,27 @@ func main() {
 		protected.POST("/send-verification-email", emailVerificationHandler.SendVerificationEmail)
 		protected.GET("/verification-status", emailVerificationHandler.GetVerificationStatus)
 
-		// Property management (landlord only) - requires email verification
-		landlordRoutes := protected.Group("/")
-		landlordRoutes.Use(middleware.RequireUserType("landlord"))
-		landlordRoutes.Use(middleware.RequireVerifiedEmail(userRepo))
+		// Admin routes - admin access required
+		adminRoutes := protected.Group("/admin")
+		adminRoutes.Use(middleware.RequireUserType("admin"))
 		{
-			landlordRoutes.POST("/properties", propertyHandler.CreateProperty)
-			landlordRoutes.PUT("/properties/:id", propertyHandler.UpdateProperty)
-			landlordRoutes.DELETE("/properties/:id", propertyHandler.DeleteProperty)
-			landlordRoutes.GET("/my-properties", propertyHandler.GetMyProperties)
-			landlordRoutes.POST("/properties/:id/images", propertyHandler.AddPropertyImage)
-			landlordRoutes.DELETE("/properties/:id/images/:image_id", propertyHandler.DeletePropertyImage)
+			adminRoutes.GET("/pending-agents", userHandler.GetPendingAgents)
+			adminRoutes.POST("/approve-agent/:agentId", userHandler.ApproveAgent)
+			adminRoutes.GET("/agents", userHandler.GetAllAgents)
+		}
+
+		// Property management (agent only) - requires email verification and admin approval
+		agentRoutes := protected.Group("/")
+		agentRoutes.Use(middleware.RequireUserType("agent"))
+		agentRoutes.Use(middleware.RequireVerifiedEmail(userRepo))
+		agentRoutes.Use(middleware.RequireApprovedAgent(userRepo))
+		{
+			agentRoutes.POST("/properties", propertyHandler.CreateProperty)
+			agentRoutes.PUT("/properties/:id", propertyHandler.UpdateProperty)
+			agentRoutes.DELETE("/properties/:id", propertyHandler.DeleteProperty)
+			agentRoutes.GET("/my-properties", propertyHandler.GetMyProperties)
+			agentRoutes.POST("/properties/:id/images", propertyHandler.AddPropertyImage)
+			agentRoutes.DELETE("/properties/:id/images/:image_id", propertyHandler.DeletePropertyImage)
 		}
 
 		// Tenant routes - requires email verification for applications and payments
