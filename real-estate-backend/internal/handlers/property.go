@@ -651,7 +651,6 @@ func (h *PropertyHandler) AddPropertyImage(c *gin.Context) {
 	// Try to get file from "image" field first, then "images" field
 	var file multipart.File
 	var header *multipart.FileHeader
-	var err error
 
 	file, header, err = c.Request.FormFile("image")
 	if err != nil {
