@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configuration
-const BASE_URL = 'https://real-estate-backend-840370620772.us-central1.run.app/api/v1';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Agent registration data
 const agentData = {

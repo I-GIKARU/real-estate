@@ -61,8 +61,14 @@ const Login = () => {
       if (response.data.token) {
         login(response.data.user, response.data.token);
         
-        // Navigate to dashboard or home
-        navigate('/');
+        // Redirect based on user type
+        if (response.data.user.user_type === 'admin') {
+          navigate('/admin/dashboard');
+        } else if (response.data.user.user_type === 'agent') {
+          navigate('/agent/properties');
+        } else {
+          navigate('/');
+        }
       }
     } catch (error) {
       console.error('Login error:', error);

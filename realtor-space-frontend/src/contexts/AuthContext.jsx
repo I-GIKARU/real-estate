@@ -58,6 +58,10 @@ export const AuthProvider = ({ children }) => {
     return user?.user_type === 'client';
   };
 
+  const isAdmin = () => {
+    return user?.user_type === 'admin';
+  };
+
   const value = {
     user,
     isAuthenticated,
@@ -65,7 +69,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     isAgent,
-    isClient
+    isClient,
+    isAdmin
   };
 
   return (

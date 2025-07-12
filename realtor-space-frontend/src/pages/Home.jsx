@@ -5,10 +5,14 @@ const Home = () => {
   const [featuredProperties, setFeaturedProperties] = useState([])
 
   useEffect(() => {
-    fetch('/data/properties.json')
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+    fetch(`${apiBaseUrl}/properties`)
         .then(response => response.json())
         .then(data => {
           setFeaturedProperties(data.properties.slice(0, 3))
+        })
+        .catch(error => {
+          console.error('Error fetching properties:', error)
         })
   }, [])
 
@@ -152,18 +156,18 @@ const PropertyCard = ({ property }) => {
       <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow hover-grow">
         <div className="h-48 overflow-hidden">
           <img
-              src={property.images[0]}
-              alt={property.name}
+              src={property.images?.[0]?.secure_url || property.images?.[0]?.image_url || '/placeholder-property.jpg'}
+              alt={property.title}
               className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
           />
         </div>
         <div className="p-6">
-          <h3 className="text-xl font-semibold mb-2">{property.name}</h3>
+          <h3 className="text-xl font-semibold mb-2">{property.title}</h3>
           <div className="flex items-center gap-2 text-gray-600 mb-3">
             <i className="fas fa-map-marker-alt"></i>
-            <span>{property.location}</span>
+            <span>{property.county?.name || property.location_details}</span>
           </div>
-          <div className="text-blue-600 text-lg font-bold mb-4">KES {property.price.toLocaleString()}</div>
+          <div className="text-blue-600 text-lg font-bold mb-4">KES {property.rent_amount?.toLocaleString()}</div>
           <div className="flex justify-between mb-4">
           <span className="flex items-center gap-1">
             <i className="fas fa-bed"></i> {property.bedrooms} Bed
@@ -172,7 +176,7 @@ const PropertyCard = ({ property }) => {
             <i className="fas fa-bath"></i> {property.bathrooms} Bath
           </span>
             <span className="flex items-center gap-1">
-            <i className="fas fa-ruler-combined"></i> {property.area} sqft
+            <i className="fas fa-ruler-combined"></i> {property.square_meters} m²
           </span>
           </div>
           <Link

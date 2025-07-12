@@ -14,8 +14,8 @@ const PropertyCard = ({ property, className = "" }) => {
       {/* Property Image */}
       <div className="relative h-64 overflow-hidden">
         <img
-          src={property.images?.[0] || '/placeholder-property.jpg'}
-          alt={property.name}
+          src={property.images?.[0]?.secure_url || property.images?.[0]?.image_url || '/placeholder-property.jpg'}
+          alt={property.title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -23,7 +23,7 @@ const PropertyCard = ({ property, className = "" }) => {
         {/* Category Badge */}
         <div className="absolute top-4 right-4">
           <span className="glass text-white px-3 py-1 rounded-full text-sm font-semibold backdrop-blur-md">
-            {property.category}
+            {property.property_type}
           </span>
         </div>
         
@@ -37,7 +37,7 @@ const PropertyCard = ({ property, className = "" }) => {
           <div className="glass backdrop-blur-md rounded-lg p-3">
             <div className="flex items-center text-white text-sm">
               <i className="fas fa-map-marker-alt mr-2"></i>
-              <span className="truncate">{property.location}</span>
+              <span className="truncate">{property.county?.name || property.location_details}</span>
             </div>
           </div>
         </div>
@@ -46,12 +46,12 @@ const PropertyCard = ({ property, className = "" }) => {
       {/* Property Info */}
       <div className="p-6">
         <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-purple-600 transition-colors duration-200">
-          {property.name}
+          {property.title}
         </h3>
 
         <div className="mb-4">
           <div className="text-3xl font-bold gradient-text mb-1">
-            {formatPrice(property.price)}
+            {formatPrice(property.rent_amount)}
           </div>
           <span className="text-sm text-gray-500">/month</span>
         </div>
@@ -75,7 +75,7 @@ const PropertyCard = ({ property, className = "" }) => {
               <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-2">
                 <i className="fas fa-ruler-combined text-green-600 text-sm"></i>
               </div>
-              <span className="text-sm font-medium">{property.area}ft²</span>
+              <span className="text-sm font-medium">{property.square_meters}m²</span>
             </div>
           </div>
         </div>

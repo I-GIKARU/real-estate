@@ -5,60 +5,105 @@ import PropertyCard from '../components/PropertyCard'
 const Listings = () => {
   const [properties, setProperties] = useState([])
   const [filteredProperties, setFilteredProperties] = useState([])
+  const [counties, setCounties] = useState([])
+  const [subCounties, setSubCounties] = useState([])
+  const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
     propertyType: 'all',
-    location: 'all',
+    county: 'all',
+    subCounty: 'all',
     priceRange: 'all'
   })
 
   useEffect(() => {
-    fetch('/data/properties.json')
-        .then(response => response.json())
-        .then(data => {
-          setProperties(data.properties)
-          setFilteredProperties(data.properties)
-        })
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        
+        // Fetch properties and counties in parallel
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+        const [propertiesResponse, countiesResponse] = await Promise.all([
+          fetch(`${apiBaseUrl}/properties`),
+          fetch(`${apiBaseUrl}/counties`)
+        ])
+        
+        const propertiesData = await propertiesResponse.json()
+        const countiesData = await countiesResponse.json()
+        
+        setProperties(propertiesData.properties)
+        setFilteredProperties(propertiesData.properties)
+        setCounties(countiesData.counties)
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchData()
   }, [])
 
-  const handleFilterChange = (e) => {
+  const handleFilterChange = async (e) => {
     const { name, value } = e.target
     setFilters(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
+      // Reset sub-county when county changes
+      ...(name === 'county' && { subCounty: 'all' })
     }))
+    
+    // Load sub-counties when county is selected
+    if (name === 'county' && value !== 'all') {
+      try {
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+        const response = await fetch(`${apiBaseUrl}/counties/${value}/sub-counties`)
+        const data = await response.json()
+        setSubCounties(data.sub_counties)
+      } catch (error) {
+        console.error('Error fetching sub-counties:', error)
+        setSubCounties([])
+      }
+    } else if (name === 'county' && value === 'all') {
+      setSubCounties([])
+    }
   }
 
   const applyFilters = () => {
     let filtered = [...properties]
 
+    // Filter by property type
     if (filters.propertyType !== 'all') {
       filtered = filtered.filter(property => {
-        if (filters.propertyType === 'single') return property.category === 'Single Room'
-        if (filters.propertyType === 'one-bedroom') return property.category === 'One Bedroom'
-        if (filters.propertyType === 'two-bedroom') return property.category === 'Two Bedroom'
-        if (filters.propertyType === 'three-bedroom') return property.category.includes('Three Bedroom') || property.category.includes('+')
-        if (filters.propertyType === 'apartment') return property.category === 'Apartment'
-        if (filters.propertyType === 'house') return property.category === 'House'
-        return true
+        return property.property_type === filters.propertyType
       })
     }
 
-    if (filters.location !== 'all') {
-      filtered = filtered.filter(property =>
-          property.location.toLowerCase().includes(filters.location.toLowerCase())
-      )
+    // Filter by county
+    if (filters.county !== 'all') {
+      filtered = filtered.filter(property => {
+        return property.county_id === parseInt(filters.county)
+      })
     }
 
+    // Filter by sub-county
+    if (filters.subCounty !== 'all') {
+      filtered = filtered.filter(property => {
+        return property.sub_county_id === parseInt(filters.subCounty)
+      })
+    }
+
+    // Filter by price range
     if (filters.priceRange !== 'all') {
       const [min, max] = filters.priceRange.split('-').map(val =>
           val.endsWith('+') ? parseInt(val) : parseInt(val)
       )
 
       filtered = filtered.filter(property => {
+        const price = property.rent_amount || 0
         if (filters.priceRange.endsWith('+')) {
-          return property.price >= min
+          return price >= min
         } else {
-          return property.price >= min && property.price <= max
+          return price >= min && price <= max
         }
       })
     }
@@ -92,28 +137,44 @@ const Listings = () => {
                     className="w-full p-3 rounded border border-gray-300 bg-white"
                 >
                   <option value="all">All Types</option>
-                  <option value="single">Single Room</option>
-                  <option value="one-bedroom">One Bedroom</option>
-                  <option value="two-bedroom">Two Bedroom</option>
-                  <option value="three-bedroom">Three Bedroom+</option>
                   <option value="apartment">Apartment</option>
                   <option value="house">House</option>
+                  <option value="villa">Villa</option>
+                  <option value="land">Land</option>
                 </select>
               </div>
 
               <div className="min-w-[200px]">
-                <label className="block mb-2 font-medium">Location</label>
+                <label className="block mb-2 font-medium">County</label>
                 <select
-                    name="location"
-                    value={filters.location}
+                    name="county"
+                    value={filters.county}
                     onChange={handleFilterChange}
                     className="w-full p-3 rounded border border-gray-300 bg-white"
                 >
-                  <option value="all">All Locations</option>
-                  <option value="nyeri">Nyeri</option>
-                  <option value="nanyuki">Nairobi</option>
+                  <option value="all">All Counties</option>
+                  {counties.map(county => (
+                    <option key={county.id} value={county.id}>{county.name}</option>
+                  ))}
                 </select>
               </div>
+
+              {subCounties.length > 0 && (
+                <div className="min-w-[200px]">
+                  <label className="block mb-2 font-medium">Sub-County</label>
+                  <select
+                      name="subCounty"
+                      value={filters.subCounty}
+                      onChange={handleFilterChange}
+                      className="w-full p-3 rounded border border-gray-300 bg-white"
+                  >
+                    <option value="all">All Sub-Counties</option>
+                    {subCounties.map(subCounty => (
+                      <option key={subCounty.id} value={subCounty.id}>{subCounty.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="min-w-[200px]">
                 <label className="block mb-2 font-medium">Price Range</label>
