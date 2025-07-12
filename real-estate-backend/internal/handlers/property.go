@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 
@@ -647,23 +648,35 @@ func (h *PropertyHandler) AddPropertyImage(c *gin.Context) {
 		log.Printf("Form files: %+v", c.Request.MultipartForm.File)
 	}
 
-	file, header, err := c.Request.FormFile("image")
+	// Try to get file from "image" field first, then "images" field
+	var file multipart.File
+	var header *multipart.FileHeader
+	var err error
+
+	file, header, err = c.Request.FormFile("image")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Image file is required",
-			"details": err.Error(),
-			"available_files": func() []string {
-				if c.Request.MultipartForm != nil {
-					var files []string
-					for filename := range c.Request.MultipartForm.File {
-						files = append(files, filename)
+		// If "image" field not found, try "images" field (get first file)
+		file, header, err = c.Request.FormFile("images")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Image file is required",
+				"details": "Expected field name 'image' or 'images'",
+				"available_files": func() []string {
+					if c.Request.MultipartForm != nil {
+						var files []string
+						for filename := range c.Request.MultipartForm.File {
+							files = append(files, filename)
+						}
+						return files
 					}
-					return files
-				}
-				return nil
-			}(),
-		})
-		return
+					return nil
+				}(),
+			})
+			return
+		}
+		log.Printf("Using 'images' field for file upload")
+	} else {
+		log.Printf("Using 'image' field for file upload")
 	}
 
 	defer file.Close()
