@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -628,10 +629,39 @@ func (h *PropertyHandler) AddPropertyImage(c *gin.Context) {
 		return
 	}
 
+	// Debug: Log the Content-Type header
+	log.Printf("Content-Type: %s", c.GetHeader("Content-Type"))
+	
+	// Check if request has form data
+	if err := c.Request.ParseMultipartForm(32 << 20); err != nil { // 32MB max
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to parse multipart form",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Debug: Log all form fields
+	if c.Request.MultipartForm != nil {
+		log.Printf("Form fields: %+v", c.Request.MultipartForm.Value)
+		log.Printf("Form files: %+v", c.Request.MultipartForm.File)
+	}
+
 	file, header, err := c.Request.FormFile("image")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Image file is required",
+			"details": err.Error(),
+			"available_files": func() []string {
+				if c.Request.MultipartForm != nil {
+					var files []string
+					for filename := range c.Request.MultipartForm.File {
+						files = append(files, filename)
+					}
+					return files
+				}
+				return nil
+			}(),
 		})
 		return
 	}
