@@ -24,6 +24,12 @@ class ApiConfig {
   static const String verifyEmail = '/verify-email';
   static const String verificationStatus = '/verification-status';
   
+  // Password reset
+  static const String forgotPassword = '/auth/forgot-password';
+  static const String resetPassword = '/auth/reset-password';
+  static const String validateResetToken = '/auth/validate-reset-token';
+  static const String changePassword = '/auth/change-password';
+  
   // Kenyan features
   static const String amenities = '/amenities';
   static const String propertyTypes = '/property-types';

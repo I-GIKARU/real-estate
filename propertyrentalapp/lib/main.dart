@@ -12,6 +12,8 @@ import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/property_details_screen.dart';
 import 'screens/booking_screen.dart';
+import 'screens/forgot_password_screen.dart';
+import 'screens/reset_password_screen.dart';
 
 
 void main() async {
@@ -58,10 +60,11 @@ home: SplashScreen(),
           '/home': (context) => HomeScreen(),
           '/tenant-home': (context) => HomeScreen(),
           '/landlord-home': (context) => HomeScreen(),
-'/properties': (context) => PropertyListScreen(),
+          '/properties': (context) => HomeScreen(),
           '/property-detail': (context) => PropertyDetailsScreen(),
           '/property_details': (context) => PropertyDetailsScreen(),
           '/booking': (context) => BookingScreen(),
+          '/forgot-password': (context) => ForgotPasswordScreen(),
         },
       ),
     );

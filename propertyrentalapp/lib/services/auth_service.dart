@@ -252,6 +252,92 @@ class AuthService {
     }
   }
 
+  // Request password reset
+  Future<bool> requestPasswordReset(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.forgotPassword}'),
+        headers: ApiConfig.headers,
+        body: jsonEncode({
+          'email': email,
+        }),
+      );
+
+      print('Request password reset response: ${response.statusCode}');
+      print('Request password reset body: ${response.body}');
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Request password reset error: $e');
+      return false;
+    }
+  }
+
+  // Validate reset token
+  Future<bool> validateResetToken(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.validateResetToken}?token=$token'),
+        headers: ApiConfig.headers,
+      );
+
+      print('Validate reset token response: ${response.statusCode}');
+      print('Validate reset token body: ${response.body}');
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Validate reset token error: $e');
+      return false;
+    }
+  }
+
+  // Reset password with token
+  Future<bool> resetPassword(String token, String newPassword) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.resetPassword}'),
+        headers: ApiConfig.headers,
+        body: jsonEncode({
+          'token': token,
+          'new_password': newPassword,
+        }),
+      );
+
+      print('Reset password response: ${response.statusCode}');
+      print('Reset password body: ${response.body}');
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Reset password error: $e');
+      return false;
+    }
+  }
+
+  // Change password (for authenticated users)
+  Future<bool> changePassword(String currentPassword, String newPassword) async {
+    try {
+      final token = await getToken();
+      if (token == null) return false;
+
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.changePassword}'),
+        headers: ApiConfig.getAuthHeaders(token),
+        body: jsonEncode({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        }),
+      );
+
+      print('Change password response: ${response.statusCode}');
+      print('Change password body: ${response.body}');
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Change password error: $e');
+      return false;
+    }
+  }
+
   // Sign out
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();

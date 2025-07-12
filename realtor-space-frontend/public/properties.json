@@ -1,0 +1,214 @@
+{
+    "properties": [
+        {
+            "id": 1,
+            "name": "2 Bedroom Apartment in Nyeri Town",
+            "category": "Two Bedroom",
+            "description": "This stunning two-bedroom apartment offers modern living in the heart of Nyeri. Featuring an open-plan living area, fully fitted kitchen, and spacious bedrooms with ensuite bathrooms. The property includes a balcony with beautiful views of the surrounding area. Secure parking and 24/7 security ensure peace of mind.",
+            "price": 15000,
+            "bedrooms": 2,
+            "bathrooms": 1,
+            "area": 1200,
+            "location": "King'ong'o Nyeri Town",
+            "images": [
+                "./../assets/images/2bedroom-king/king8.jpeg",
+                "./../assets/images/2bedroom-king/king2.jpeg",
+                "./../assets/images/2bedroom-king/king1.jpeg",
+                "./../assets/images/2bedroom-king/king9.jpeg",
+                "./../assets/images/2bedroom-king/king3.jpeg"
+            ],
+            "virtualTour": "https://www.youtube.com/embed/7U0y7H7Y9q4",
+            "amenities": [
+                "Swimming Pool",
+                "Gym",
+                "24/7 Security",
+                "Parking",
+                "Balcony",
+                "Fitted Kitchen",
+                "Ensuite Bathrooms",
+                "Water Backup",
+                "Garden"
+            ],
+            "management": {
+                "name": "John Kamau",
+                "type": "Landlord",
+                "contact": "+254 712 345678",
+                "photo": "https://randomuser.me/api/portraits/men/32.jpg"
+            }
+        },
+        {
+            "id": 2,
+            "name": "Modern Air BnB in Nanyuki",
+            "category": "One Bedroom",
+            "description": "Contemporary one-bedroom Air BnB located in a prime location in Nanyuki. Features include a modern kitchen, spacious living area, and a comfortable bedroom with ample storage. The building offers shared amenities including a rooftop terrace with panoramic city views. Ideal for young professionals.",
+            "price": 3500,
+            "bedrooms": 1,
+            "bathrooms": 1,
+            "area": 850,
+            "location": "Muthaiga, Nanyuki",
+            "images": [
+                "./../assets/images/Airbnb/canva1.jpeg",
+                "./../assets/images/Airbnb/canva2.jpeg",
+                "./../assets/images/Airbnb/canva3.jpeg",
+                "./../assets/images/Airbnb/canva4.jpeg",
+                "./../assets/images/Airbnb/canva6.jpeg"
+            ],
+            "virtualTour": "https://www.youtube.com/embed/7U0y7H7Y9q4",
+            "amenities": [
+                "Rooftop Terrace",
+                "24/7 Security",
+                "Parking",
+                "Modern Kitchen",
+                "Water Backup",
+                "Elevator",
+                "Shared Laundry"
+            ],
+            "management": {
+                "name": "Property Masters Ltd",
+                "type": "Agent",
+                "contact": "+254 720 987654",
+                "photo": "https://randomuser.me/api/portraits/women/45.jpg"
+            }
+        },
+        {
+            "id": 3,
+            "name": "Spacious Three Bedroom House",
+            "category": "Three Bedroom+",
+            "description": "Beautiful three-bedroom family home in a quiet Nyeri suburb. The property features a large living room, dining area, modern kitchen, and a spacious master bedroom with walk-in closet. The compound includes a well-maintained garden and outdoor entertainment area. Perfect for families looking for comfort and space.",
+            "price": 80000,
+            "bedrooms": 3,
+            "bathrooms": 2,
+            "area": 2200,
+            "location": "Milimani, Nyeri",
+            "images": [
+                "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
+            ],
+            "virtualTour": "https://www.youtube.com/embed/3q5Zb9m7y9k",
+            "amenities": [
+                "Garden",
+                "Parking (2 cars)",
+                "Outdoor Entertainment Area",
+                "Modern Kitchen",
+                "Walk-in Closet",
+                "Water Backup",
+                "Security System",
+                "Storage"
+            ],
+            "management": {
+                "name": "Sarah Wanjiku",
+                "type": "Owner",
+                "contact": "+254 722 112233",
+                "photo": "https://randomuser.me/api/portraits/women/63.jpg"
+            }
+        },
+        {
+            "id": 4,
+            "name": "Cozy Single Room Near University",
+            "category": "Single Room",
+            "description": "Affordable single room accommodation ideal for students. Located within walking distance to the university campus. The room comes furnished with a bed, study desk, and wardrobe. Shared kitchen and bathroom facilities. Safe and quiet neighborhood with easy access to public transport.",
+            "price": 7500,
+            "bedrooms": 1,
+            "bathrooms": 1,
+            "area": 300,
+            "location": "Near Nyeri University, Nyeri",
+            "images": [
+                "https://images.unsplash.com/photo-1556911220-bff31c812dba?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1560448204-603b3fc33ddc?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1556910638-90e06a8a3a40?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1556911220-e15b29be8c8d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
+            ],
+            "virtualTour": "",
+            "amenities": [
+                "Furnished",
+                "Shared Kitchen",
+                "Study Desk",
+                "Wardrobe",
+                "Security",
+                "Water Available",
+                "Near Public Transport"
+            ],
+            "management": {
+                "name": "James Mwangi",
+                "type": "Landlord",
+                "contact": "+254 733 445566",
+                "photo": "https://randomuser.me/api/portraits/men/75.jpg"
+            }
+        },
+        {
+            "id": 5,
+            "name": "Executive Apartment in Mombasa",
+            "category": "Apartment",
+            "description": "Luxury executive apartment in Mombasa with stunning ocean views. Features include a modern open-plan living area, fully equipped kitchen, two spacious bedrooms, and a large balcony. Building amenities include swimming pool, gym, and 24-hour security. Perfect for those seeking a premium coastal living experience.",
+            "price": 120000,
+            "bedrooms": 2,
+            "bathrooms": 2,
+            "area": 1500,
+            "location": "Nyali, Mombasa",
+            "images": [
+                "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1493809842364-78817add7ffb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
+            ],
+            "virtualTour": "https://www.youtube.com/embed/5qap5aO4i9A",
+            "amenities": [
+                "Ocean View",
+                "Swimming Pool",
+                "Gym",
+                "24/7 Security",
+                "Parking",
+                "Balcony",
+                "Fitted Kitchen",
+                "Ensuite Bathrooms",
+                "Water Backup",
+                "Elevator"
+            ],
+            "management": {
+                "name": "Coastal Properties Ltd",
+                "type": "Agent",
+                "contact": "+254 734 556677",
+                "photo": "https://randomuser.me/api/portraits/women/28.jpg"
+            }
+        },
+        {
+            "id": 6,
+            "name": "Charming Cottage in Nyeri Countryside",
+            "category": "House",
+            "description": "Beautiful stone cottage located in the peaceful Nyeri countryside. The property features two bedrooms, a cozy living room with fireplace, and a country-style kitchen. Surrounded by lush gardens with mature trees. Perfect for those looking to escape the city and enjoy nature.",
+            "price": 60000,
+            "bedrooms": 2,
+            "bathrooms": 1,
+            "area": 1800,
+            "location": "Nyeri Countryside, Nyeri",
+            "images": [
+                "https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+                "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
+            ],
+            "virtualTour": "https://www.youtube.com/embed/8xg3vE8Ie_E",
+            "amenities": [
+                "Garden",
+                "Fireplace",
+                "Parking",
+                "Country Kitchen",
+                "Water Backup",
+                "Quiet Location",
+                "Nature Views"
+            ],
+            "management": {
+                "name": "David Kariuki",
+                "type": "Owner",
+                "contact": "+254 711 223344",
+                "photo": "https://randomuser.me/api/portraits/men/51.jpg"
+            }
+        }
+    ]
+}
