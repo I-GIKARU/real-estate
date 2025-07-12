@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { propertyApi } from '../services/api'
 
 const Home = () => {
   const [featuredProperties, setFeaturedProperties] = useState([])
 
   useEffect(() => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-    fetch(`${apiBaseUrl}/properties`)
-        .then(response => response.json())
-        .then(data => {
-          setFeaturedProperties(data.properties.slice(0, 3))
+    propertyApi.getAll()
+        .then(response => {
+          if (response?.data?.properties) {
+            setFeaturedProperties(response.data.properties.slice(0, 3))
+          }
         })
         .catch(error => {
           console.error('Error fetching properties:', error)

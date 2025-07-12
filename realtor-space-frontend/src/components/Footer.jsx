@@ -6,7 +6,7 @@ const Footer = () => {
             {/* Logo and Info */}
             <div>
               <div className="flex items-center gap-3 mb-5">
-                <img src="/Logo2.png" alt="Logo" className="w-12" />
+                <img src="/logo2.png" alt="Logo" className="w-12" />
                 <h1 className="text-xl font-bold">Realtor's Space</h1>
               </div>
               <p className="text-gray-400 mb-3">Premium property listings with luxury experience</p>
