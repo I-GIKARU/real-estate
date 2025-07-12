@@ -1,0 +1,32 @@
+# Binaries
+kenyan-real-estate-backend
+server
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Environment files
+.env
+.env.*
+
+# IDE files
+.idea/
+.vscode/
+
+# Test files
+*_test.go
+
+# Scripts
+scripts/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
