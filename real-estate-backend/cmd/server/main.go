@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 
 	"real-estate-backend/internal/config"
 	"real-estate-backend/internal/database"
@@ -114,10 +113,8 @@ func main() {
 	router.Use(middleware.CORSMiddleware())
 	router.Use(gin.Recovery())
 
-	// Setup Swagger (conditionally based on environment)
-	if os.Getenv("DISABLE_SWAGGER") != "true" {
-		setupSwagger(router, cfg)
-	}
+	// Setup Swagger documentation
+	setupSwagger(router, cfg)
 
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
