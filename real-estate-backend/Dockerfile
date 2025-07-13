@@ -43,9 +43,8 @@ COPY --from=builder /app/migrations ./migrations
 # Expose the port that the app runs on
 EXPOSE 8080
 
-# Set environment variables for Cloud Run
+# Set environment variable for port (Cloud Run requirement)
 ENV PORT=8080
-ENV SWAGGER_HOST=real-estate-backend-840370620772.us-central1.run.app
 
 # Command to run the application
 CMD ["./main"]
