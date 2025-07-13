@@ -24,9 +24,14 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/amenities": {
+        "/admin/agents": {
             "get": {
-                "description": "Get all available property amenities, optionally filtered by category",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get all agents (approved and pending)",
                 "consumes": [
                     "application/json"
                 ],
@@ -34,27 +39,451 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Kenyan Features"
+                    "Admin"
                 ],
-                "summary": "Get property amenities",
+                "summary": "Get all agents",
+                "responses": {
+                    "200": {
+                        "description": "All agents",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "agents": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/definitions/models.UserResponse"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin access required",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/approve-agent/{agentId}": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Approve an agent to allow property management",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Approve an agent",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Filter by category",
-                        "name": "category",
-                        "in": "query"
+                        "description": "Agent ID",
+                        "name": "agentId",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of amenities",
+                        "description": "Agent approved successfully",
                         "schema": {
                             "type": "object",
                             "properties": {
-                                "amenities": {
-                                    "type": "object"
+                                "agent": {
+                                    "$ref": "#/definitions/models.UserResponse"
+                                },
+                                "message": {
+                                    "type": "string"
                                 }
                             }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid agent ID",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin access required",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Agent not found",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/pending-agents": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get all agents waiting for admin approval",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get pending agents",
+                "responses": {
+                    "200": {
+                        "description": "Pending agents",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "agents": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/definitions/models.UserResponse"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin access required",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/change-password": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Change password for authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Change password",
+                "parameters": [
+                    {
+                        "description": "Change password request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password changed successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/forgot-password": {
+            "post": {
+                "description": "Send password reset email to user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Request password reset",
+                "parameters": [
+                    {
+                        "description": "Forgot password request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ForgotPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password reset email sent",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/reset-password": {
+            "post": {
+                "description": "Reset password using reset token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Reset password",
+                "parameters": [
+                    {
+                        "description": "Reset password request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ResetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password reset successful",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Token not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/validate-reset-token": {
+            "get": {
+                "description": "Validate if a reset token is valid and not expired",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Validate reset token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Reset token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Token is valid",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid or expired token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Token not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -248,67 +677,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/format-currency": {
-            "post": {
-                "description": "Format an amount in Kenyan Shillings (KES)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Kenyan Features"
-                ],
-                "summary": "Format currency",
-                "parameters": [
-                    {
-                        "description": "Amount to format",
-                        "name": "amount_data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "amount": {
-                                    "type": "number"
-                                }
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Formatted currency",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "amount": {
-                                    "type": "number"
-                                },
-                                "formatted": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request data",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "details": {
-                                    "type": "string"
-                                },
-                                "error": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/login": {
             "post": {
                 "description": "Authenticate user with email and password",
@@ -397,7 +765,7 @@ const docTemplate = `{
                         "Bearer": []
                     }
                 ],
-                "description": "Get all properties owned by the authenticated landlord",
+                "description": "Get all properties managed by the authenticated agent",
                 "consumes": [
                     "application/json"
                 ],
@@ -464,53 +832,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/popular-areas": {
-            "get": {
-                "description": "Get popular residential areas, optionally filtered by county",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Kenyan Features"
-                ],
-                "summary": "Get popular areas",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filter by county name",
-                        "name": "county",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of popular areas",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "areas": {
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "County not found",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "error": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/profile": {
             "get": {
                 "security": [
@@ -554,126 +875,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "User not found",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "error": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "error": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Update the profile information of the currently authenticated user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Update user profile",
-                "parameters": [
-                    {
-                        "description": "Profile updates",
-                        "name": "updates",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "first_name": {
-                                    "type": "string"
-                                },
-                                "id_number": {
-                                    "type": "string"
-                                },
-                                "last_name": {
-                                    "type": "string"
-                                },
-                                "phone_number": {
-                                    "type": "string"
-                                },
-                                "profile_image_url": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Profile updated successfully",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "message": {
-                                    "type": "string"
-                                },
-                                "user": {
-                                    "$ref": "#/definitions/models.UserResponse"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request data",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "details": {
-                                    "type": "string"
-                                },
-                                "error": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "error": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "User not found",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "error": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Phone number already exists",
                         "schema": {
                             "type": "object",
                             "properties": {
@@ -839,7 +1040,7 @@ const docTemplate = `{
                         "Bearer": []
                     }
                 ],
-                "description": "Create a new property listing (landlord only)",
+                "description": "Create a new property listing (agent only)",
                 "consumes": [
                     "application/json"
                 ],
@@ -1425,106 +1626,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/property-types": {
-            "get": {
-                "description": "Get all available property types with their descriptions",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Kenyan Features"
-                ],
-                "summary": "Get property types",
-                "responses": {
-                    "200": {
-                        "description": "List of property types",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "property_types": {
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/refresh-token": {
-            "post": {
-                "description": "Refresh an expired JWT token to get a new one",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Refresh JWT token",
-                "parameters": [
-                    {
-                        "description": "Refresh token request",
-                        "name": "token",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "token": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Token refreshed successfully",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "token": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request data",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "details": {
-                                    "type": "string"
-                                },
-                                "error": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Failed to refresh token",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "details": {
-                                    "type": "string"
-                                },
-                                "error": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/register": {
             "post": {
                 "description": "Create a new user account with email, password, and profile information",
@@ -1599,34 +1700,6 @@ const docTemplate = `{
                             "properties": {
                                 "error": {
                                     "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/rental-terms": {
-            "get": {
-                "description": "Get common rental terms used in Kenya",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Kenyan Features"
-                ],
-                "summary": "Get rental terms",
-                "responses": {
-                    "200": {
-                        "description": "List of rental terms",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "rental_terms": {
-                                    "type": "object"
                                 }
                             }
                         }
@@ -1781,95 +1854,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/utilities": {
-            "get": {
-                "description": "Get default utilities information for properties",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Kenyan Features"
-                ],
-                "summary": "Get utilities information",
-                "responses": {
-                    "200": {
-                        "description": "List of utilities",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "utilities": {
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/validate-phone": {
-            "post": {
-                "description": "Validate a Kenyan phone number format",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Kenyan Features"
-                ],
-                "summary": "Validate phone number",
-                "parameters": [
-                    {
-                        "description": "Phone number to validate",
-                        "name": "phone_data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "phone_number": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Validation result",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "is_valid": {
-                                    "type": "boolean"
-                                },
-                                "phone_number": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request data",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "details": {
-                                    "type": "string"
-                                },
-                                "error": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/verification-status": {
             "get": {
                 "security": [
@@ -1932,6 +1916,77 @@ const docTemplate = `{
             }
         },
         "/verify-email": {
+            "get": {
+                "description": "Verify email address using the verification token from URL parameter",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Email Verification"
+                ],
+                "summary": "Verify email address via GET",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Verification token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Email verified successfully",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string"
+                                },
+                                "user": {
+                                    "$ref": "#/definitions/models.UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid token or expired",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Token not found",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Verify email address using the verification token",
                 "consumes": [
@@ -2005,12 +2060,120 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/web/reset-password": {
+            "get": {
+                "description": "Serve HTML form for password reset",
+                "consumes": [
+                    "text/html"
+                ],
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Get password reset form",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Reset token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HTML form",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Process password reset form submission",
+                "consumes": [
+                    "application/x-www-form-urlencoded"
+                ],
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Handle password reset form submission",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Reset token",
+                        "name": "token",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "New password",
+                        "name": "password",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Confirm new password",
+                        "name": "confirm_password",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Error page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
         "models.Amenities": {
             "type": "object",
             "additionalProperties": true
+        },
+        "models.ChangePasswordRequest": {
+            "type": "object",
+            "required": [
+                "confirm_password",
+                "current_password",
+                "new_password"
+            ],
+            "properties": {
+                "confirm_password": {
+                    "type": "string"
+                },
+                "current_password": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string",
+                    "minLength": 8
+                }
+            }
         },
         "models.County": {
             "type": "object",
@@ -2148,6 +2311,17 @@ const docTemplate = `{
                 }
             }
         },
+        "models.ForgotPasswordRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
         "models.LoginRequest": {
             "type": "object",
             "required": [
@@ -2166,6 +2340,12 @@ const docTemplate = `{
         "models.Property": {
             "type": "object",
             "properties": {
+                "agent": {
+                    "$ref": "#/definitions/models.User"
+                },
+                "agent_id": {
+                    "type": "string"
+                },
                 "amenities": {
                     "$ref": "#/definitions/models.Amenities"
                 },
@@ -2212,12 +2392,6 @@ const docTemplate = `{
                 },
                 "is_furnished": {
                     "type": "boolean"
-                },
-                "landlord": {
-                    "$ref": "#/definitions/models.User"
-                },
-                "landlord_id": {
-                    "type": "string"
                 },
                 "latitude": {
                     "type": "number"
@@ -2332,6 +2506,26 @@ const docTemplate = `{
                 "PropertyTypeCommercial"
             ]
         },
+        "models.ResetPasswordRequest": {
+            "type": "object",
+            "required": [
+                "confirm_password",
+                "password",
+                "token"
+            ],
+            "properties": {
+                "confirm_password": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
         "models.SubCounty": {
             "type": "object",
             "properties": {
@@ -2425,6 +2619,13 @@ const docTemplate = `{
         "models.User": {
             "type": "object",
             "properties": {
+                "approved_at": {
+                    "type": "string"
+                },
+                "approved_by": {
+                    "description": "Admin who approved",
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2438,6 +2639,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "is_active": {
+                    "type": "boolean"
+                },
+                "is_approved": {
+                    "description": "For agent approval by admin",
                     "type": "boolean"
                 },
                 "is_verified": {
@@ -2470,6 +2675,9 @@ const docTemplate = `{
         "models.UserResponse": {
             "type": "object",
             "properties": {
+                "approved_at": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2483,6 +2691,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "is_active": {
+                    "type": "boolean"
+                },
+                "is_approved": {
                     "type": "boolean"
                 },
                 "is_verified": {
@@ -2508,12 +2719,12 @@ const docTemplate = `{
         "models.UserType": {
             "type": "string",
             "enum": [
-                "landlord",
+                "admin",
                 "tenant",
                 "agent"
             ],
             "x-enum-varnames": [
-                "UserTypeLandlord",
+                "UserTypeAdmin",
                 "UserTypeTenant",
                 "UserTypeAgent"
             ]
@@ -2550,8 +2761,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "Kenyan Real Estate API",
-	Description:      "A comprehensive API for managing real estate properties in Kenya",
+	Title:            "Real Estate API",
+	Description:      "A comprehensive API for managing real estate properties",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

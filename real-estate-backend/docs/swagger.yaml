@@ -3,6 +3,20 @@ definitions:
   models.Amenities:
     additionalProperties: true
     type: object
+  models.ChangePasswordRequest:
+    properties:
+      confirm_password:
+        type: string
+      current_password:
+        type: string
+      new_password:
+        minLength: 8
+        type: string
+    required:
+    - confirm_password
+    - current_password
+    - new_password
+    type: object
   models.County:
     properties:
       code:
@@ -98,6 +112,13 @@ definitions:
     - phone_number
     - user_type
     type: object
+  models.ForgotPasswordRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
   models.LoginRequest:
     properties:
       email:
@@ -110,6 +131,10 @@ definitions:
     type: object
   models.Property:
     properties:
+      agent:
+        $ref: '#/definitions/models.User'
+      agent_id:
+        type: string
       amenities:
         $ref: '#/definitions/models.Amenities'
       availability_date:
@@ -140,10 +165,6 @@ definitions:
         type: boolean
       is_furnished:
         type: boolean
-      landlord:
-        $ref: '#/definitions/models.User'
-      landlord_id:
-        type: string
       latitude:
         type: number
       location_details:
@@ -222,6 +243,20 @@ definitions:
     - PropertyTypeBungalow
     - PropertyTypeVilla
     - PropertyTypeCommercial
+  models.ResetPasswordRequest:
+    properties:
+      confirm_password:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      token:
+        type: string
+    required:
+    - confirm_password
+    - password
+    - token
+    type: object
   models.SubCounty:
     properties:
       county:
@@ -284,6 +319,11 @@ definitions:
     type: object
   models.User:
     properties:
+      approved_at:
+        type: string
+      approved_by:
+        description: Admin who approved
+        type: string
       created_at:
         type: string
       email:
@@ -293,6 +333,9 @@ definitions:
       id:
         type: string
       is_active:
+        type: boolean
+      is_approved:
+        description: For agent approval by admin
         type: boolean
       is_verified:
         type: boolean
@@ -314,6 +357,8 @@ definitions:
     type: object
   models.UserResponse:
     properties:
+      approved_at:
+        type: string
       created_at:
         type: string
       email:
@@ -323,6 +368,8 @@ definitions:
       id:
         type: string
       is_active:
+        type: boolean
+      is_approved:
         type: boolean
       is_verified:
         type: boolean
@@ -339,12 +386,12 @@ definitions:
     type: object
   models.UserType:
     enum:
-    - landlord
+    - admin
     - tenant
     - agent
     type: string
     x-enum-varnames:
-    - UserTypeLandlord
+    - UserTypeAdmin
     - UserTypeTenant
     - UserTypeAgent
   models.UtilitiesIncluded:
@@ -363,37 +410,316 @@ info:
     email: support@swagger.io
     name: API Support
     url: http://www.swagger.io/support
-  description: A comprehensive API for managing real estate properties in Kenya
+  description: A comprehensive API for managing real estate properties
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   termsOfService: http://swagger.io/terms/
-  title: Kenyan Real Estate API
+  title: Real Estate API
   version: "1.0"
 paths:
-  /amenities:
+  /admin/agents:
     get:
       consumes:
       - application/json
-      description: Get all available property amenities, optionally filtered by category
+      description: Get all agents (approved and pending)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All agents
+          schema:
+            properties:
+              agents:
+                items:
+                  $ref: '#/definitions/models.UserResponse'
+                type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "403":
+          description: Forbidden - Admin access required
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all agents
+      tags:
+      - Admin
+  /admin/approve-agent/{agentId}:
+    post:
+      consumes:
+      - application/json
+      description: Approve an agent to allow property management
       parameters:
-      - description: Filter by category
-        in: query
-        name: category
+      - description: Agent ID
+        in: path
+        name: agentId
+        required: true
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: List of amenities
+          description: Agent approved successfully
           schema:
             properties:
-              amenities:
-                type: object
+              agent:
+                $ref: '#/definitions/models.UserResponse'
+              message:
+                type: string
             type: object
-      summary: Get property amenities
+        "400":
+          description: Invalid agent ID
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "403":
+          description: Forbidden - Admin access required
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "404":
+          description: Agent not found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Approve an agent
       tags:
-      - Kenyan Features
+      - Admin
+  /admin/pending-agents:
+    get:
+      consumes:
+      - application/json
+      description: Get all agents waiting for admin approval
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Pending agents
+          schema:
+            properties:
+              agents:
+                items:
+                  $ref: '#/definitions/models.UserResponse'
+                type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "403":
+          description: Forbidden - Admin access required
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get pending agents
+      tags:
+      - Admin
+  /auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Change password for authenticated user
+      parameters:
+      - description: Change password request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password changed successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - auth
+  /auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Send password reset email to user
+      parameters:
+      - description: Forgot password request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset email sent
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Request password reset
+      tags:
+      - auth
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset password using reset token
+      parameters:
+      - description: Reset password request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset successful
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or token
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Token not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Reset password
+      tags:
+      - auth
+  /auth/validate-reset-token:
+    get:
+      consumes:
+      - application/json
+      description: Validate if a reset token is valid and not expired
+      parameters:
+      - description: Reset token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token is valid
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid or expired token
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Token not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Validate reset token
+      tags:
+      - auth
   /counties:
     get:
       consumes:
@@ -515,45 +841,6 @@ paths:
       summary: Get sub-counties by county ID
       tags:
       - Location
-  /format-currency:
-    post:
-      consumes:
-      - application/json
-      description: Format an amount in Kenyan Shillings (KES)
-      parameters:
-      - description: Amount to format
-        in: body
-        name: amount_data
-        required: true
-        schema:
-          properties:
-            amount:
-              type: number
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Formatted currency
-          schema:
-            properties:
-              amount:
-                type: number
-              formatted:
-                type: string
-            type: object
-        "400":
-          description: Invalid request data
-          schema:
-            properties:
-              details:
-                type: string
-              error:
-                type: string
-            type: object
-      summary: Format currency
-      tags:
-      - Kenyan Features
   /login:
     post:
       consumes:
@@ -610,7 +897,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all properties owned by the authenticated landlord
+      description: Get all properties managed by the authenticated agent
       parameters:
       - default: 20
         description: Number of results per page
@@ -653,36 +940,6 @@ paths:
       summary: Get my properties
       tags:
       - Properties
-  /popular-areas:
-    get:
-      consumes:
-      - application/json
-      description: Get popular residential areas, optionally filtered by county
-      parameters:
-      - description: Filter by county name
-        in: query
-        name: county
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of popular areas
-          schema:
-            properties:
-              areas:
-                type: object
-            type: object
-        "404":
-          description: County not found
-          schema:
-            properties:
-              error:
-                type: string
-            type: object
-      summary: Get popular areas
-      tags:
-      - Kenyan Features
   /profile:
     get:
       consumes:
@@ -722,82 +979,6 @@ paths:
       security:
       - Bearer: []
       summary: Get user profile
-      tags:
-      - Users
-    put:
-      consumes:
-      - application/json
-      description: Update the profile information of the currently authenticated user
-      parameters:
-      - description: Profile updates
-        in: body
-        name: updates
-        required: true
-        schema:
-          properties:
-            first_name:
-              type: string
-            id_number:
-              type: string
-            last_name:
-              type: string
-            phone_number:
-              type: string
-            profile_image_url:
-              type: string
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Profile updated successfully
-          schema:
-            properties:
-              message:
-                type: string
-              user:
-                $ref: '#/definitions/models.UserResponse'
-            type: object
-        "400":
-          description: Invalid request data
-          schema:
-            properties:
-              details:
-                type: string
-              error:
-                type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            properties:
-              error:
-                type: string
-            type: object
-        "404":
-          description: User not found
-          schema:
-            properties:
-              error:
-                type: string
-            type: object
-        "409":
-          description: Phone number already exists
-          schema:
-            properties:
-              error:
-                type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            properties:
-              error:
-                type: string
-            type: object
-      security:
-      - Bearer: []
-      summary: Update user profile
       tags:
       - Users
   /properties:
@@ -897,7 +1078,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new property listing (landlord only)
+      description: Create a new property listing (agent only)
       parameters:
       - description: Property data
         in: body
@@ -1272,70 +1453,6 @@ paths:
       summary: Delete property image
       tags:
       - Properties
-  /property-types:
-    get:
-      consumes:
-      - application/json
-      description: Get all available property types with their descriptions
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of property types
-          schema:
-            properties:
-              property_types:
-                type: object
-            type: object
-      summary: Get property types
-      tags:
-      - Kenyan Features
-  /refresh-token:
-    post:
-      consumes:
-      - application/json
-      description: Refresh an expired JWT token to get a new one
-      parameters:
-      - description: Refresh token request
-        in: body
-        name: token
-        required: true
-        schema:
-          properties:
-            token:
-              type: string
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Token refreshed successfully
-          schema:
-            properties:
-              token:
-                type: string
-            type: object
-        "400":
-          description: Invalid request data
-          schema:
-            properties:
-              details:
-                type: string
-              error:
-                type: string
-            type: object
-        "401":
-          description: Failed to refresh token
-          schema:
-            properties:
-              details:
-                type: string
-              error:
-                type: string
-            type: object
-      summary: Refresh JWT token
-      tags:
-      - Authentication
   /register:
     post:
       consumes:
@@ -1388,24 +1505,6 @@ paths:
       summary: Register a new user
       tags:
       - Authentication
-  /rental-terms:
-    get:
-      consumes:
-      - application/json
-      description: Get common rental terms used in Kenya
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of rental terms
-          schema:
-            properties:
-              rental_terms:
-                type: object
-            type: object
-      summary: Get rental terms
-      tags:
-      - Kenyan Features
   /send-verification-email:
     post:
       consumes:
@@ -1499,63 +1598,6 @@ paths:
       summary: Get sub-county by ID
       tags:
       - Location
-  /utilities:
-    get:
-      consumes:
-      - application/json
-      description: Get default utilities information for properties
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of utilities
-          schema:
-            properties:
-              utilities:
-                type: object
-            type: object
-      summary: Get utilities information
-      tags:
-      - Kenyan Features
-  /validate-phone:
-    post:
-      consumes:
-      - application/json
-      description: Validate a Kenyan phone number format
-      parameters:
-      - description: Phone number to validate
-        in: body
-        name: phone_data
-        required: true
-        schema:
-          properties:
-            phone_number:
-              type: string
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Validation result
-          schema:
-            properties:
-              is_valid:
-                type: boolean
-              phone_number:
-                type: string
-            type: object
-        "400":
-          description: Invalid request data
-          schema:
-            properties:
-              details:
-                type: string
-              error:
-                type: string
-            type: object
-      summary: Validate phone number
-      tags:
-      - Kenyan Features
   /verification-status:
     get:
       consumes:
@@ -1595,6 +1637,52 @@ paths:
       tags:
       - Email Verification
   /verify-email:
+    get:
+      consumes:
+      - application/json
+      description: Verify email address using the verification token from URL parameter
+      parameters:
+      - description: Verification token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Email verified successfully
+          schema:
+            properties:
+              message:
+                type: string
+              user:
+                $ref: '#/definitions/models.UserResponse'
+            type: object
+        "400":
+          description: Invalid token or expired
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "404":
+          description: Token not found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: Verify email address via GET
+      tags:
+      - Email Verification
     post:
       consumes:
       - application/json
@@ -1642,6 +1730,65 @@ paths:
       summary: Verify email address
       tags:
       - Email Verification
+  /web/reset-password:
+    get:
+      consumes:
+      - text/html
+      description: Serve HTML form for password reset
+      parameters:
+      - description: Reset token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML form
+          schema:
+            type: string
+        "400":
+          description: Invalid token
+          schema:
+            type: string
+      summary: Get password reset form
+      tags:
+      - web
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Process password reset form submission
+      parameters:
+      - description: Reset token
+        in: formData
+        name: token
+        required: true
+        type: string
+      - description: New password
+        in: formData
+        name: password
+        required: true
+        type: string
+      - description: Confirm new password
+        in: formData
+        name: confirm_password
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: Success page
+          schema:
+            type: string
+        "400":
+          description: Error page
+          schema:
+            type: string
+      summary: Handle password reset form submission
+      tags:
+      - web
 securityDefinitions:
   Bearer:
     description: Type "Bearer" followed by a space and JWT token.

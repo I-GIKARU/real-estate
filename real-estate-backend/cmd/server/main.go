@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	// "real-estate-backend/docs"
+	"real-estate-backend/docs"
 	"real-estate-backend/internal/config"
 	"real-estate-backend/internal/database"
 	"real-estate-backend/internal/handlers"
@@ -15,8 +15,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	// ginSwagger "github.com/swaggo/gin-swagger"
-	// swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	swaggerFiles "github.com/swaggo/files"
 )
 
 // @title           Real Estate API
@@ -116,9 +116,9 @@ func main() {
 	router.Use(middleware.CORSMiddleware())
 	router.Use(gin.Recovery())
 
-	// Swagger documentation (disabled for Docker build)
-	// docs.SwaggerInfo.Host = fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	// router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Swagger documentation
+	docs.SwaggerInfo.Host = fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
