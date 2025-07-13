@@ -16,8 +16,8 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the application with proper module settings (disable Swagger for Docker)
-RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -a -installsuffix cgo -tags noswagger -o main ./cmd/server
+# Build the application with proper module settings (with Swagger enabled)
+RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -a -installsuffix cgo -o main ./cmd/server
 
 # Use a minimal Alpine image for runtime
 FROM alpine:latest
