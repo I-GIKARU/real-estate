@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"real-estate-backend/docs"
 	"real-estate-backend/internal/config"
@@ -15,16 +16,12 @@ import (
 func setupSwagger(router *gin.Engine, cfg *config.Config) {
 	log.Println("Setting up Swagger documentation...")
 	
-	// Configure swagger host based on environment
-	var swaggerHost string
-	if cfg.Server.Env == "production" {
-		// For production, use the actual deployed URL
-		swaggerHost = "real-estate-backend-840370620772.us-central1.run.app"
-	} else {
-		// For development, use localhost
-		swaggerHost = fmt.Sprintf("localhost:%d", cfg.Server.Port)
+	// Configure swagger host based on environment variable
+	swaggerHost := os.Getenv("SWAGGER_HOST")
+	if swaggerHost == "" {
+		log.Println("Warning: SWAGGER_HOST not set. Using default host configuration.")
+		swaggerHost = fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	}
-	
 	docs.SwaggerInfo.Host = swaggerHost
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	
